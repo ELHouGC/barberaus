@@ -1,99 +1,85 @@
 mod config;
-mod error;
-mod auth;
+mod cqrs;
 mod domain;
-mod projections;
+mod error;
+mod infrastructure;
+mod state;
 mod transport;
+use resend_rs::Method;
+use transport::http;
+mod application;
+
 
 use axum::{
-    extract::ws::{Message, WebSocket, WebSocketUpgrade},
-    response::IntoResponse,
-    routing::{get, post},
-    Json, Router,
+    Router, http::header, routing::get,
 };
-use serde::{Deserialize, Serialize};
+use deadpool_redis::{Config as RedisConfig, Runtime};
+use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
-use tower_http::cors::{Any, CorsLayer};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tower_http::cors::CorsLayer;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SystemStatus {
-    pub status: String,
-    pub service: String,
-    pub version: String,
+use config::Config;
+use state::AppState;
+
+async fn health_check() -> &'static str {
+    "BarberOS Platform Identity Engine Active"
 }
 
 #[tokio::main]
-async fn main() {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt::init();
+    dotenvy::dotenv().ok();
 
-    // CORS configuration for local Vue 3 dev server
+    let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL must be set");
+
+    let config = Config::from_env();
+
+    let db_pool = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&db_url)
+        .await?;
+
+    let redis_cfg = RedisConfig::from_url(redis_url);
+    let redis_pool = redis_cfg.create_pool(Some(Runtime::Tokio1))?;
+
+    let app_state = AppState::new(db_pool, redis_pool, config);
+
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        // 1. Explicitly list frontend origins (Do NOT use Any / '*')
+        .allow_origin([
+            "http://localhost:5173".parse().unwrap(),
+            "http://127.0.0.1:5173".parse().unwrap(),
+        ])
+        // 2. Allow necessary HTTP methods
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        // 3. Allow standard authentication headers
+        .allow_headers([
+            header::AUTHORIZATION,
+            header::ACCEPT,
+            header::CONTENT_TYPE,
+            header::COOKIE,
+            header::HeaderName::from_static("x-refresh-token"),
+        ])
+        // 4. Crucial: Allow HttpOnly cookies across origins
+        .allow_credentials(true);
 
     let app = Router::new()
-        .route("/api/health", get(health_check))
-        .route("/ws", get(ws_handler))
+        .route("/health", get(health_check))
+        .merge(http::router::auth::create_router(app_state))
         .layer(cors);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    tracing::info!("BarberOS Server listening on http://{}", addr);
+    tracing::info!("Server running on http://{}", addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
-}
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app).await?;
 
-// REST Health Check Endpoint
-async fn health_check() -> Json<SystemStatus> {
-    Json(SystemStatus {
-        status: "online".to_string(),
-        service: "BarberOS Core API".to_string(),
-        version: "0.1.0".to_string(),
-    })
-}
-
-// WebSocket Upgrade Handler (Axum 0.8 compatible signature)
-async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket))
-}
-
-async fn handle_socket(mut socket: WebSocket) {
-    tracing::info!("Client connected via WebSocket");
-
-    // Send welcome heartbeat event to connected client
-    let welcome_msg = serde_json::json!({
-        "event": "CONNECTED",
-        "payload": { "message": "Established socket handshake with BarberOS Engine" }
-    });
-
-    if socket
-        .send(Message::Text(welcome_msg.to_string().into()))
-        .await
-        .is_err()
-    {
-        return;
-    }
-
-    while let Some(Ok(msg)) = socket.recv().await {
-        if let Message::Text(text) = msg {
-            tracing::info!("Received WS Message: {}", text);
-
-            let ack = serde_json::json!({
-                "event": "ACK",
-                "payload": { "received": text.as_str() }
-            });
-
-            if socket
-                .send(Message::Text(ack.to_string().into()))
-                .await
-                .is_err()
-            {
-                break;
-            }
-        }
-    }
+    Ok(())
 }

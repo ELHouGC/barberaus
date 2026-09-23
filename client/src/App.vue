@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import ConnectionTest from './components/ConnectionTest.vue'
+// Router handles everything automatically via layout and guards
 </script>
 
 <template>
-  <ConnectionTest />
+  <main class="min-h-screen bg-app-bg text-tx-primary">
+    <RouterView />
+  </main>
 </template>

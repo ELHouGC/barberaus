@@ -1,5 +1,4 @@
-pub mod api_error;
-pub mod problem_details;
-pub mod problem_factory;
+mod api_error;
 pub mod domain_mapper;
 pub mod into_response;
+pub use api_error::ApiError;

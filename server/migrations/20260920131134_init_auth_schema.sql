@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS user_credentials (
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
     is_barber_profile_active BOOLEAN NOT NULL DEFAULT FALSE,
+    is_account_active BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
