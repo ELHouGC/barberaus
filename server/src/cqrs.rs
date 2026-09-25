@@ -3,10 +3,10 @@ use cqrs_es::persist::PersistedEventStore;
 use postgres_es::PostgresEventRepository;
 use sqlx::PgPool;
 
-use crate::domain::user::user_aggregate::UserAggregate;
+use crate::domain::user::account_aggregate::UserAccountAggregate;
 
-pub type UserEventStore = PersistedEventStore<PostgresEventRepository, UserAggregate>;
-pub type UserCqrsFramework = CqrsFramework<UserAggregate, UserEventStore>;
+pub type UserEventStore = PersistedEventStore<PostgresEventRepository, UserAccountAggregate>;
+pub type UserCqrsFramework = CqrsFramework<UserAccountAggregate, UserEventStore>;
 
 pub fn create_cqrs_framework(pool: PgPool) -> UserCqrsFramework {
     let repo = PostgresEventRepository::new(pool);

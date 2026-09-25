@@ -83,7 +83,8 @@ pub async fn logout(
         Some(refresh_token.as_str()),
     )
     .await?;
-
+    //2. call the app to log that the user has logged out
+    //state.auth_app.logout(auth.user_id()).await?;
     // 2. Build the HeaderMap that instructs the browser to clear the cookie
     let headers = auth_cookies::clear_refresh_cookie();
 

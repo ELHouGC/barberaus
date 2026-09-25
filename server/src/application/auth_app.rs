@@ -8,7 +8,7 @@ use crate::{
             email_verification::EmailVerificationService,
             password_hasher_service::PasswordHasherService,
         },
-        user::user_aggregate::UserCommand,
+        user::account_aggregate::UserCommand,
     }, error::ApiError,  transport::dto::auth::{
         LoginRequest, MessageResponse, ResendVerificationRequest, SignupRequest, SignupResponse, UserPayload, VerifyEmailRequest, 
     },
@@ -40,7 +40,8 @@ impl AuthApp {
         }
     }
 
-    pub async fn signup(&self, payload: SignupRequest) -> Result<SignupResponse, ApiError> {
+    pub async fn signup(&self, payload: SignupRequest) ->
+     Result<SignupResponse, ApiError> {
         let password_hash = self.password_hasher.hash(payload.password).await?;
         let user_id = Uuid::new_v4();
 
@@ -103,7 +104,7 @@ impl AuthApp {
             .find_by_id(payload.user_id)
             .await?
             .ok_or(ApiError::UserNotFound)?;
-
+        // todo  : the cqrs must be called here to active the account state and prepar it for onboarding process 
         Ok(
             UserPayload {
                 user_id: user.user_id,
