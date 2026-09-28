@@ -46,3 +46,4 @@ resend-rs = "0.32.3"
 sha2 = "0.10"
 hex = "0.4"
 rand = "0.8"
+validator = { version = "0.21.0", features = ["derive"] }

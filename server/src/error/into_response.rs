@@ -94,6 +94,14 @@ impl IntoResponse for ApiError {
                 None,
             ),
 
+            // Input validation errors return OK status with structured code
+            ApiError::InvalidInput(ref msg) => (
+                StatusCode::OK,
+                "INVALID_INPUT",
+                msg.as_str(),
+                None,
+            ),
+
             // Server-side unexpected failures remain 500s
             ApiError::DatabaseError
             | ApiError::Unexpected

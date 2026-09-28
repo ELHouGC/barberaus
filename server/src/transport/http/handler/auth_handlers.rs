@@ -3,7 +3,7 @@ use axum::{Json, extract::State, http::HeaderMap};
 use crate::{
     error::ApiError, infrastructure::redis::session_management::{self}, state::AppState, transport::{
         dto::auth::{
-            AuthResponse, LoginRequest, MessageResponse, ResendVerificationRequest, Session, SignupRequest, SignupResponse, VerifyEmailRequest,
+            AuthResponse, CompleteOnboardingRequest, LoginRequest, MessageResponse, OnboardingResponse, ResendVerificationRequest, Session, SignupRequest, SignupResponse, VerifyEmailRequest,
         }, middlewares::{auth_context::AuthContext, auth_cookies, refresh_token::RefreshToken}, response::ApiResponse,
     },
 };
@@ -51,6 +51,7 @@ pub async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<(HeaderMap, Json<ApiResponse<AuthResponse>>), ApiError> {
+    println!("hited from app");
     let res = state.auth_app.login(payload).await?;
      // 2. Create dual-token session in Redis
     let session = session_management::create_session(
@@ -111,3 +112,4 @@ pub async fn refresh_token(
 
     Ok((headers, Json(ApiResponse::success(AuthResponse { access_token: session.access_token, token_type: session.token_type, user: session.user }))))
 }
+
