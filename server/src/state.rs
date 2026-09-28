@@ -5,8 +5,8 @@ use std::sync::Arc;
 use crate::{
     application::auth_app::AuthApp,
     config::Config,
-    cqrs::create_cqrs_framework,
-    domain::services::email_verification::{EmailSender, EmailVerificationService},
+    cqrs::{ClientProfileCqrsFramework, UserViewRepository, create_cqrs_framework},
+    application::services::email_verification::{EmailSender, EmailVerificationService},
     infrastructure::persistence::{
         pg_auth_repository::PgUserAuthRepository,
         pg_email_verification_repository::PostgresEmailVerificationRepo,
@@ -20,6 +20,8 @@ use crate::{
 #[derive(Clone)]
 pub struct AppState {
     pub auth_app: AuthApp,
+    pub client_profile_cqrs_framework: Arc<ClientProfileCqrsFramework>,
+    pub user_view_repo: Arc<UserViewRepository>, // Exposed for query/read endpoints
     pub redis_pool: RedisPool,
     pub config: Config,
 }
@@ -44,18 +46,17 @@ impl AppState {
             std::env::var("FROM_EMAIL").unwrap_or_else(|_| "noreply@barberos.com".to_string()),
         ));
 
-        let user_cqrs = Arc::new(create_cqrs_framework(db_pool));
+        let (user_cqrs, client_profile_cqrs_framework, user_view_repo) =
+            create_cqrs_framework(db_pool);
+        let user_cqrs = Arc::new(user_cqrs);
         let password_hasher = Arc::new(Argon2PasswordHasher);
 
-        let auth_app = AuthApp::new(
-            auth_repo,
-            password_hasher,
-            user_cqrs,
-            verification_service,
-        );
+        let auth_app = AuthApp::new(auth_repo, password_hasher, user_cqrs, verification_service);
 
         Self {
             auth_app,
+            client_profile_cqrs_framework,
+            user_view_repo,
             redis_pool,
             config,
         }
