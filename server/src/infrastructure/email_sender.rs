@@ -1,5 +1,5 @@
 use crate::{
-    domain::services::email_verification::{EmailMessage, EmailSender},
+    application::services::email_verification::{EmailMessage, EmailSender},
     error::ApiError,
 };
 use async_trait::async_trait;

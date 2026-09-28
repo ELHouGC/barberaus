@@ -6,7 +6,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
-    domain::repositories::email_verification_repository::{
+    application::ports::email_verification_repository::{
         EmailVerification, EmailVerificationRepo,
     },
     error::ApiError,

@@ -3,15 +3,17 @@ use uuid::Uuid;
 
 use crate::{
     cqrs::UserCqrsFramework, domain::{
-        repositories::auth_repository::{UserAuthRepository, UserCredentialsRecord},
-        services::{
-            email_verification::EmailVerificationService,
-            password_hasher_service::PasswordHasherService,
-        },
-        user::account_aggregate::UserCommand,
+        
+        user::account_aggregate::UserAccountCommand,
     }, error::ApiError,  transport::dto::auth::{
         LoginRequest, MessageResponse, ResendVerificationRequest, SignupRequest, SignupResponse, UserPayload, VerifyEmailRequest, 
     },
+    application::{
+        ports::auth_repository::{UserAuthRepository, UserCredentialsRecord},
+        services::{
+            email_verification::EmailVerificationService,
+            password_hasher_service::PasswordHasherService,
+        },}
 };
 
 #[derive(Clone)]
@@ -62,7 +64,7 @@ impl AuthApp {
             .user_cqrs_framework
             .execute(
                 &user_id.to_string(),
-                UserCommand::RegisterUser {
+                UserAccountCommand::RegisterUser {
                     user_id,
                     email: payload.email.clone(),
                     full_name: payload.full_name,
@@ -105,6 +107,20 @@ impl AuthApp {
             .await?
             .ok_or(ApiError::UserNotFound)?;
         // todo  : the cqrs must be called here to active the account state and prepar it for onboarding process 
+         
+         let command_result = self
+            .user_cqrs_framework
+            .execute(
+                &user.user_id.to_string(),
+                UserAccountCommand::VerifyEmail ,
+            )
+            .await;
+        
+        let user_id = &user.user_id;
+        if let Err(err) = command_result {
+            tracing::error!("CQRS command failed for user {user_id}, rolling back: {err:?}");
+            return Err(ApiError::InternalServerError);
+        }
         Ok(
             UserPayload {
                 user_id: user.user_id,

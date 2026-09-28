@@ -3,7 +3,7 @@ use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 use crate::{
-    domain::repositories::auth_repository::{UserAuthRepository, UserCredentialsRecord},
+    application::ports::auth_repository::{UserAuthRepository, UserCredentialsRecord},
     error::ApiError,
 };
 
