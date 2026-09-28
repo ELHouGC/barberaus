@@ -1,13 +1,20 @@
-import axios from "axios";
-import type { AuthResponse, LoginRequest, MessageResponse, ResendVerificationRequest, SignupRequest, SignupResponse, VerifyEmailRequest } from "./auth.contracts";
-import { apiClient, setAccessToken } from "./client.api";
-import type { ApiErrorResponse, ApiResponse } from "./envelopes";
+import type { 
+  AuthResponse, 
+  LoginRequest, 
+  MessageResponse, 
+  ResendVerificationRequest, 
+  SignupRequest, 
+  SignupResponse, 
+  VerifyEmailRequest 
+} from "./auth.contracts";
+import { api } from "./client.api";
+import { useAuthStore } from "@/stores/auth"; // Adjust import path to match your store
+import type { ApiResponse } from "./envelopes";
 
 export const transportApi = {
   async signup(data: SignupRequest): Promise<ApiResponse<SignupResponse>> {
     try {
-      const response = await apiClient.post<ApiResponse<SignupResponse>>('/auth/signup', data);
-      return response.data;
+      return await api.post<ApiResponse<SignupResponse>>('/auth/signup', data);
     } catch (err) {
       return handleApiError(err);
     }
@@ -15,8 +22,7 @@ export const transportApi = {
 
   async resendVerification(data: ResendVerificationRequest): Promise<ApiResponse<MessageResponse>> {
     try {
-      const response = await apiClient.post<ApiResponse<MessageResponse>>('/auth/resend-verification', data);
-      return response.data;
+      return await api.post<ApiResponse<MessageResponse>>('/auth/resend-verification', data);
     } catch (err) {
       return handleApiError(err);
     }
@@ -24,11 +30,12 @@ export const transportApi = {
 
   async verify(data: VerifyEmailRequest): Promise<ApiResponse<AuthResponse>> {
     try {
-      const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/verify-email', data);
-      if (response.data.success) {
-        setAccessToken(response.data.data.access_token);
+      const response = await api.post<ApiResponse<AuthResponse>>('/auth/verify-email', data);
+      if (response.success && response.data) {
+        const authStore = useAuthStore();
+        authStore.setSession(response.data);
       }
-      return response.data;
+      return response;
     } catch (err) {
       return handleApiError(err);
     }
@@ -36,11 +43,12 @@ export const transportApi = {
 
   async login(credentials: LoginRequest): Promise<ApiResponse<AuthResponse>> {
     try {
-      const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/login', credentials);
-      if (response.data.success) {
-        setAccessToken(response.data.data.access_token);
+      const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', credentials);
+      if (response.success && response.data) {
+        const authStore = useAuthStore();
+        authStore.setSession(response.data);
       }
-      return response.data;
+      return response;
     } catch (err) {
       return handleApiError(err);
     }
@@ -48,37 +56,31 @@ export const transportApi = {
 
   async refresh(): Promise<ApiResponse<AuthResponse>> {
     try {
-      const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/session/refresh');
-      if (response.data.success) {
-        setAccessToken(response.data.data.access_token);
+      const response = await api.post<ApiResponse<AuthResponse>>('/auth/session/refresh');
+      if (response.success && response.data) {
+        const authStore = useAuthStore();
+        authStore.setSession(response.data);
       }
-      return response.data;
+      return response;
     } catch (err) {
       return handleApiError(err);
     }
   },
 
   async logout(): Promise<ApiResponse<MessageResponse>> {
+    const authStore = useAuthStore();
     try {
-      // Receives refresh cookie via Path=/api/v1/auth/session and clears it with Set-Cookie Max-Age=0
-      const response = await apiClient.post<ApiResponse<MessageResponse>>('/auth/session/logout');
-      setAccessToken(null);
-      return response.data;
+      const response = await api.post<ApiResponse<MessageResponse>>('/auth/session/logout');
+      authStore.clearSession();
+      return response;
     } catch (err) {
-      setAccessToken(null);
+      authStore.clearSession();
       return handleApiError(err);
     }
   },
 };
 
 function handleApiError<T>(err: unknown): ApiResponse<T> {
-  if (axios.isAxiosError(err) && err.response?.data) {
-    const apiError = err.response.data as ApiErrorResponse;
-    if (apiError.error) {
-      return apiError;
-    }
-  }
-
   return {
     success: false,
     error: {

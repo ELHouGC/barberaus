@@ -7,6 +7,7 @@ import type {
   VerifyEmailRequest, 
   UserPayload 
 } from '@/transport/auth.contracts'
+import type { s } from 'vue-router/dist/router-CWoNjPRp.mjs'
 
 export const useAuthStore = defineStore('auth', () => {
   // 1. State
@@ -22,6 +23,9 @@ export const useAuthStore = defineStore('auth', () => {
   function setSession(authData: AuthResponse) {
     accessToken.value = authData.access_token
     user.value = authData.user
+  }
+  function updateToken(access_token: string ) {
+    accessToken.value = access_token;
   }
 
   function clearSession() {
@@ -141,6 +145,7 @@ export const useAuthStore = defineStore('auth', () => {
     isBarberActive,
     // Actions
     setSession,
+    updateToken,
     clearSession,
     verifyEmail,
     login,

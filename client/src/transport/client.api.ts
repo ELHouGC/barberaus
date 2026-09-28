@@ -1,134 +1,158 @@
-import axios, {
-  type AxiosInstance,
-  type InternalAxiosRequestConfig,
-  AxiosError,
-} from 'axios';
-import type { ApiErrorResponse, ApiResponse } from './envelopes';
-import type { AuthResponse } from './auth.contracts';
+// src/services/client.api.ts
+import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
+import { isTauri } from '@tauri-apps/api/core';
+import { useAuthStore } from '@/stores/auth'; // Adjust import to your Pinia/Vue auth store
 
+const getBaseUrl = (): string => {
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  if (configuredBaseUrl) {
+    return configuredBaseUrl;
+  }
 
-// -------------------------------------------------------------------------
-// In-Memory Access Token Storage
-// -------------------------------------------------------------------------
-
-
-let memoryAccessToken: string | null = null;
-
-export const setAccessToken = (token: string | null): void => {
-  memoryAccessToken = token;
+  if (import.meta.env.DEV) {
+    const isAndroid = isTauri() && /android/i.test(navigator.userAgent);
+    return isAndroid ? 'http://192.168.1.7:8080/api/v1' : 'http://localhost:8080/api/v1';
+  }
+  return 'https://api.yourdomain.com';
 };
 
-export const getAccessToken = (): string | null => {
-  return memoryAccessToken;
-};
+export const BASE_URL = getBaseUrl();
 
-// -------------------------------------------------------------------------
-// Axios Instance
-// -------------------------------------------------------------------------
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
-
-export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true, // Enables HttpOnly cookie sending for /auth/session/*
-});
-
-// Attach Access Token to outgoing requests
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = getAccessToken();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response Interceptor: Queueing & Silent Refresh
-interface QueueItem {
-  resolve: (value?: unknown) => void;
-  reject: (reason?: unknown) => void;
+export interface RequestOptions extends Omit<RequestInit, 'body'> {
+  body?: any;
+  _retry?: boolean; // Flag to prevent infinite refresh loops
 }
 
+// Single-flight refresh state management to prevent race conditions
 let isRefreshing = false;
-let failedQueue: QueueItem[] = [];
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (reason?: any) => void;
+}> = [];
 
-const processQueue = (error: AxiosError | null, token: string | null = null): void => {
+const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
-    } else {
+    } else if (token) {
       prom.resolve(token);
     }
   });
   failedQueue = [];
 };
 
-const handleUnauthorizedSession = (): void => {
-  setAccessToken(null);
-  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-    window.location.href = '/login';
+export async function apiClient<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  const { body, headers, _retry, ...restOptions } = options;
+  const authStore = useAuthStore(); // Access in-memory token state
+
+  const fetchFn = isTauri() ? tauriFetch : window.fetch;
+
+  // 1. REQUEST INTERCEPTOR: Attach in-memory access token
+  const requestHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(headers as Record<string, string>),
+  };
+
+  if (authStore.accessToken) {
+    requestHeaders['Authorization'] = `Bearer ${authStore.accessToken}`;
   }
-};
 
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError<ApiErrorResponse>) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+  const config: RequestInit = {
+    ...restOptions,
+    credentials: 'include', // Automatically passes & saves HttpOnly cookies in Rust's cookie jar
+    headers: requestHeaders,
+  };
 
-    const isAuthRoute = originalRequest?.url?.includes('/auth/login') ||
-                        originalRequest?.url?.includes('/auth/session/refresh') ||
-                        originalRequest?.url?.includes('/auth/signup');
+  if (body !== undefined) {
+    config.body = typeof body === 'string' ? body : JSON.stringify(body);
+  }
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
+  try {
+    const response = await fetchFn(`${BASE_URL}${endpoint}`, config);
+
+    // 2. RESPONSE INTERCEPTOR: Handle 401 Unauthorized
+    if (response.status === 401 && !_retry && !endpoint.includes('/auth/refresh')) {
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
+        // Queue parallel requests until the active token refresh completes
+        return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-            }
-            return apiClient(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
+        }).then(() => {
+          options._retry = true;
+          return apiClient<T>(endpoint, options);
+        });
       }
 
-      originalRequest._retry = true;
+      options._retry = true;
       isRefreshing = true;
 
       try {
-        // Triggers POST /api/v1/auth/session/refresh with HttpOnly cookie automatically attached
-        const refreshResponse = await apiClient.post<ApiResponse<AuthResponse>>('/auth/session/refresh');
+        // Attempt token refresh call to Axum
+        // (Axum will read the HttpOnly refresh_token cookie from Rust's Cookie Jar)
+        const refreshResponse = await apiClient<{
+          access_token: string;
+          jti: string;
+          user_id: string;
+        }>('/api/v1/auth/refresh', {
+          method: 'POST',
+          _retry: true,
+        });
+       
+        // Update in-memory auth store
+        authStore.updateToken(refreshResponse.access_token);
 
-        if (refreshResponse.data.success) {
-          const newAccessToken = refreshResponse.data.data.access_token;
-          setAccessToken(newAccessToken);
-          processQueue(null, newAccessToken);
+        processQueue(null, refreshResponse.access_token);
 
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          }
-
-          return apiClient(originalRequest);
-        } else {
-          processQueue(error, null);
-          handleUnauthorizedSession();
-          return Promise.reject(error);
-        }
-      } catch (refreshErr) {
-        processQueue(refreshErr as AxiosError, null);
-        handleUnauthorizedSession();
-        return Promise.reject(refreshErr);
+        // Retry original failed request with the new token
+        return apiClient<T>(endpoint, options);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        authStore.clearSession(); // Force logout on failed refresh
+        throw refreshError;
       } finally {
         isRefreshing = false;
       }
     }
 
-    return Promise.reject(error);
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.message) errorMessage = errorData.message;
+      } catch {
+        // Non-JSON error payload
+      }
+      throw new Error(errorMessage);
+    }
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    return response.json();
+  } catch (error) {
+    throw error;
   }
-);
+}
+
+// 3. Convenience REST Helpers
+export const api = {
+  get: <T>(endpoint: string, options?: RequestOptions) =>
+    apiClient<T>(endpoint, { ...options, method: 'GET' }),
+
+  post: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+    apiClient<T>(endpoint, { ...options, method: 'POST', body }),
+
+  put: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+    apiClient<T>(endpoint, { ...options, method: 'PUT', body }),
+
+  patch: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+    apiClient<T>(endpoint, { ...options, method: 'PATCH', body }),
+
+  delete: <T>(endpoint: string, options?: RequestOptions) =>
+    apiClient<T>(endpoint, { ...options, method: 'DELETE' }),
+};
+
+
