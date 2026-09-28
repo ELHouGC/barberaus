@@ -14,6 +14,7 @@ const password = ref('')
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 const showPassword = ref(false)
+
 const handleSignup = async () => {
   errorMessage.value = null
   loading.value = true
@@ -25,7 +26,13 @@ const handleSignup = async () => {
       password: password.value
     })
     
-    const userId = response.data?.user_id 
+    // 1. Check if the wrapper returned an error state
+    if (!response.success) {
+      throw new Error(response.error?.message || 'Failed to create account.')
+    }
+    
+    // 2. Safe to extract user_id now
+    const userId = response.error ? null : (response as any).user_id // Adjust based on your actual data structure wrapper
     
     router.push({ 
       path: '/verify', 
