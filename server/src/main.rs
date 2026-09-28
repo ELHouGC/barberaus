@@ -16,7 +16,7 @@ use axum::{
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use config::Config;
 use state::AppState;
@@ -47,10 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cors = CorsLayer::new()
         // 1. Explicitly list frontend origins (Do NOT use Any / '*')
-        .allow_origin([
-            "http://localhost:5173".parse().unwrap(),
-            "http://127.0.0.1:5173".parse().unwrap(),
-        ])
+        .allow_origin(AllowOrigin::mirror_request())
         // 2. Allow necessary HTTP methods
         .allow_methods([
             Method::GET,
@@ -75,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(http::router::auth::create_router(app_state))
         .layer(cors);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     tracing::info!("Server running on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
