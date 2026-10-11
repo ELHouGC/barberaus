@@ -42,55 +42,55 @@ impl AuthApp {
         }
     }
 
-    pub async fn signup(&self, payload: SignupRequest) ->
-     Result<SignupResponse, ApiError> {
-        let password_hash = self.password_hasher.hash(payload.password).await?;
-        let user_id = Uuid::new_v4();
+pub async fn signup(&self, payload: SignupRequest) -> Result<SignupResponse, ApiError> {
+    let password_hash = self.password_hasher.hash(payload.password).await?;
+    let user_id = Uuid::new_v4();
 
-        // Step 1: Create relational credentials record (inactive by default)
-        let record = UserCredentialsRecord {
-            user_id,
-            email: payload.email.clone(),
-            password_hash,
-            full_name: payload.full_name.clone(),
-            is_account_active: false,
-            is_barber_profile_active: false,
-        };
+    // Step 1: Create relational credentials record
+    let record = UserCredentialsRecord {
+        user_id,
+        email: payload.email.clone(),
+        password_hash,
+        full_name: payload.full_name.clone(),
+        is_account_active: false,
+        is_barber_profile_active: false,
+    };
 
-        self.auth_repo.create_user(record).await?;
+    self.auth_repo.create_user(record).await?;
 
-        // Step 2: Dispatch CQRS event to stream
-        let command_result = self
-            .user_cqrs_framework
-            .execute(
-                &user_id.to_string(),
-                UserAccountCommand::RegisterUser {
-                    user_id,
-                    email: payload.email.clone(),
-                    full_name: payload.full_name,
-                },
-            )
-            .await;
+    // Step 2: Dispatch CQRS event command to event store
+    let command_result = self
+        .user_cqrs_framework
+        .execute(
+            &user_id.to_string(),
+            UserAccountCommand::RegisterUser {
+                user_id,
+                email: payload.email.clone(),
+                full_name: payload.full_name,
+                date_of_birth: payload.date_of_birth,
+                gender: payload.gender,
+            },
+        )
+        .await;
 
-        // Step 3: Rollback relational record if EventStore fails
-        if let Err(err) = command_result {
-            tracing::error!("CQRS command failed for user {user_id}, rolling back: {err:?}");
-            let _ = self.auth_repo.delete_user(user_id).await;
-            return Err(ApiError::InternalServerError);
-        }
-
-        // Step 4: Generate verification code and dispatch email
-        self.email_verification_service
-            .prepare_for_verification(user_id, &payload.email)
-            .await?;
-
-        Ok(SignupResponse {
-            message: "Registration successful. Please check your email for your verification code."
-                .to_string(),
-            user_id,
-        })
+    // Step 3: Rollback relational record if EventStore fails
+    if let Err(err) = command_result {
+        tracing::error!("CQRS command failed for user {user_id}, rolling back: {err:?}");
+        let _ = self.auth_repo.delete_user(user_id).await;
+        return Err(ApiError::InternalServerError);
     }
 
+    // Step 4: Generate verification code and dispatch email
+    self.email_verification_service
+        .prepare_for_verification(user_id, &payload.email)
+        .await?;
+
+    Ok(SignupResponse {
+        message: "Registration successful. Please check your email for your verification code."
+            .to_string(),
+        user_id,
+    })
+}
     pub async fn verify_email(
         &self,
         payload: VerifyEmailRequest,
@@ -155,6 +155,7 @@ impl AuthApp {
             .await?;
 
         if !is_valid {
+            print!("Invalid credentials for user: {}", payload.email);
             return Err(ApiError::InvalidCredentials);
         }
 

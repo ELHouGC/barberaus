@@ -1,9 +1,14 @@
-use crate::error::ApiError;
+
 use async_trait::async_trait;
 use sqlx::prelude::FromRow;
 use uuid::Uuid;
 
+use crate::error::ApiError;
+
+
 #[derive(Debug, Clone, FromRow)]
+
+
 pub struct UserCredentialsRecord {
     pub user_id: Uuid,
     pub email: String,
@@ -12,6 +17,8 @@ pub struct UserCredentialsRecord {
     pub is_account_active: bool,
     pub is_barber_profile_active: bool,
 }
+
+
 #[allow(dead_code)]
 #[async_trait]
 pub trait UserAuthRepository: Send + Sync {

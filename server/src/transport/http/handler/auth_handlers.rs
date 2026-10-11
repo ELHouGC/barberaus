@@ -12,6 +12,7 @@ pub async fn signup(
     State(state): State<AppState>,
     Json(payload): Json<SignupRequest>,
 ) -> Result<Json<ApiResponse<SignupResponse>>, ApiError> {
+    payload.validate()?;
     let res = state.auth_app.signup(payload).await?;
     Ok(Json(ApiResponse::success(res)))
 }
