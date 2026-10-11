@@ -39,7 +39,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"full_name\": \"{{fullName}}\"\n}"
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"full_name\": \"{{fullName}}\",\n  \"date_of_birth\": \"{{dateOfBirth}}\",\n  \"gender\": \"{{gender}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/signup",
@@ -236,6 +236,53 @@
         }
       ]
     },
+    {
+      "name": "02 - Client",
+      "item": [
+        {
+          "name": "Complete onboarding",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Onboarding success response', function () {",
+                  "    pm.expect(body.code).to.eql('SUCCESS');",
+                  "    pm.expect(body.data.message).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"city\": \"Algiers\",\n  \"search_radius_km\": 15,\n  \"selected_styles\": [\"Skin Fade\", \"Beard Sculpting\"],\n  \"followed_barber_ids\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/client/onboarding",
+              "host": ["{{baseUrl}}"],
+              "path": ["client", "onboarding"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+
     {
       "name": "Health",
       "event": [
