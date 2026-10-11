@@ -1,5 +1,15 @@
 @import "tailwindcss";
+/* Custom styling for native date inputs in dark theme */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) hue-rotate(180deg) brightness(1.2);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
 
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
 @theme {
   /* Backgrounds */
   --color-app-bg: #09090B;

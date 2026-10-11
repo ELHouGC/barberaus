@@ -5,40 +5,97 @@ import { transportApi } from '@/transport/auth.api'
 import AuthLayout from '@/components/layout/AuthLayout.vue'
 import AuthInput from '@/components/ui/AuthInput.vue'
 import AuthButton from '@/components/ui/AuthButton.vue'
+import type { SignupGender } from '@/transport/auth.contracts'
+import { useForm, useField } from 'vee-validate'
+import * as yup from 'yup'
 
 const router = useRouter()
 
-const fullName = ref('')
-const email = ref('')
-const password = ref('')
 const loading = ref(false)
 const errorMessage = ref<string | null>(null)
 const showPassword = ref(false)
 
-const handleSignup = async () => {
+// Age calculation helper
+const calculateAge = (dobString: string): number => {
+  if (!dobString) return 0
+  const dob = new Date(dobString)
+  const today = new Date()
+  let age = today.getFullYear() - dob.getFullYear()
+  const monthDiff = today.getMonth() - dob.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+    age--
+  }
+  return age
+}
+
+// 1. Declarative Yup Validation Schema
+const signupValidationSchema = yup.object({
+  full_name: yup
+    .string()
+    .trim()
+    .required('Full name is required')
+    .min(2, 'Full name must be at least 2 characters'),
+  email: yup
+    .string()
+    .trim()
+    .required('Email address is required')
+    .email('Please enter a valid email address'),
+  date_of_birth: yup
+    .string()
+    .required('Date of birth is required')
+    .test('is-past', 'Date of birth must be in the past', (value) => {
+      if (!value) return false
+      return new Date(value) < new Date()
+    })
+    .test('min-age', 'You must be at least 13 years old to register', (value) => {
+      if (!value) return false
+      return calculateAge(value) >= 13
+    }),
+  gender: yup
+    .string()
+    .oneOf(['Male', 'Female', 'PreferNotToSay'], 'Invalid gender selection')
+    .required('Gender is required'),
+  password: yup
+    .string()
+    .required('Password is required')
+    .min(8, 'Password must be at least 8 characters')
+})
+
+// 2. Initialize VeeValidate Form Engine
+const { handleSubmit, errors } = useForm({
+  validationSchema: signupValidationSchema,
+  initialValues: {
+    full_name: '',
+    email: '',
+    date_of_birth: '',
+    gender: 'PreferNotToSay',
+    password: ''
+  }
+})
+
+// 3. Destructure field bindings safely using VeeValidate's helpers
+const { value: fullName, handleChange: handleFullNameChange } = useField<string>('full_name')
+const { value: email, handleChange: handleEmailChange } = useField<string>('email')
+const { value: dateOfBirth, handleChange: handleDobChange } = useField<string>('date_of_birth')
+const { value: gender, handleChange: handleGenderChange } = useField<SignupGender>('gender')
+const { value: password, handleChange: handlePasswordChange } = useField<string>('password')
+
+const onSubmit = handleSubmit(async (values) => {
   errorMessage.value = null
   loading.value = true
 
   try {
-    const response = await transportApi.signup({
-      full_name: fullName.value,
-      email: email.value,
-      password: password.value
-    })
-    
-    // 1. Check if the wrapper returned an error state
+    const response = await transportApi.signup(values as any)
     if (!response.success) {
       throw new Error(response.error?.message || 'Failed to create account.')
     }
     
-    // 2. Safe to extract user_id now
-    const userId = response.error ? null : (response as any).user_id // Adjust based on your actual data structure wrapper
-    
+    const user_id = response.error ? null : response.data.user_id 
     router.push({ 
       path: '/verify', 
       query: { 
-        email: email.value, 
-        userId: userId 
+        email: email.value as string, 
+        user_id: user_id ?? '' 
       } 
     })
   } catch (err: any) {
@@ -46,67 +103,100 @@ const handleSignup = async () => {
   } finally {
     loading.value = false
   }
-}
+})
 </script>
-
 <template>
   <AuthLayout 
     title="Create an Account" 
     subtitle="Get started managing your shop with ClientFeed."
   >
-    <form @submit.prevent="handleSignup" class="mt-6 space-y-4">
-      <div 
-        v-if="errorMessage" 
-        class="rounded-lg border border-error-border bg-error-bg px-3 py-3 text-[13px] text-error-text"
-      >
-        {{ errorMessage }}
+    <form @submit.prevent="onSubmit" class="space-y-4" novalidate>
+      <div>
+        <AuthInput 
+          id="fullname"
+          type="text"
+          label="Full Name" 
+          :modelValue="fullName"
+          @update:modelValue="handleFullNameChange"
+          placeholder="John Doe" 
+        />
+        <p v-if="errors.full_name" class="mt-1 text-xs text-red-500">
+          {{ errors.full_name }}
+        </p>
       </div>
 
-      <AuthInput 
-        id="fullname"
-        type="text"
-        label="Full Name" 
-        v-model="fullName" 
-        placeholder="John Doe" 
-      />
 
-      <AuthInput 
-        id="email"
-        type="email"
-        label="Email Address" 
-        v-model="email" 
-        placeholder="name@example.com" 
-      />
 
-      <AuthInput
-        id="password"
-        :type="showPassword ? 'text' : 'password'"
-        label="Password" 
-        v-model="password" 
-        placeholder="********">
-      <template #icon>
-        <button
-            type="button"
-            @click="showPassword = !showPassword"
-            class="text-tx-muted transition-colors hover:text-tx-secondary"
-          >
-            <!-- Eye-off icon -->
-            <svg v-if="showPassword" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-              <path d="m1 1 22 22" />
-            </svg>
-            <!-- Eye icon -->
-            <svg v-else class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>
-        </template>
-      </AuthInput>
+      <div>
+        <AuthInput
+          id="dob"
+          type="date"
+          label="Date of Birth"
+          :modelValue="dateOfBirth"
+          @update:modelValue="handleDobChange"
+        
+        />
+        <p v-if="errors.date_of_birth" class="mt-1 text-xs text-red-500">
+          {{ errors.date_of_birth }}
+        </p>
+      </div>
 
-      <AuthButton :isLoading="loading">
-        {{ loading ? 'Creating account...' : 'Create Account' }}
+      <div>
+        <label for="gender" class="mb-1.5 block text-[0.875rem] font-medium text-[#FAFAFA]">
+          Gender
+        </label>
+        <select
+          id="gender"
+          :value="gender"
+          @change="handleGenderChange(($event.target as HTMLSelectElement).value)"
+          class="h-11 w-full rounded-lg border border-[#27272A] bg-[#09090B] px-3 text-[0.875rem] text-[#FAFAFA] outline-none transition focus:border-[#F59E0B]"
+        >
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="PreferNotToSay">Prefer not to say</option>
+        </select>
+        <p v-if="errors.gender" class="mt-1 text-xs text-red-500">
+          {{ errors.gender }}
+        </p>
+      </div>
+
+      <div>
+        <AuthInput 
+          id="email"
+          type="email"
+          label="Email Address" 
+          :modelValue="email"
+          @update:modelValue="handleEmailChange"
+          placeholder="name@example.com" 
+        />
+        <p v-if="errors.email" class="mt-1 text-xs text-red-500">
+          {{ errors.email }}
+        </p>
+      </div>
+      
+      <div>
+        <AuthInput
+          id="password"
+          :type="showPassword ? 'text' : 'password'"
+          label="Password" 
+          :modelValue="password"
+          @update:modelValue="handlePasswordChange"
+          placeholder="********"
+        />
+        <p v-if="errors.password" class="mt-1 text-xs text-red-500">
+          {{ errors.password }}
+        </p>
+      </div>
+
+      <p v-if="errorMessage" class="text-xs text-red-500">
+        {{ errorMessage }}
+      </p>
+
+      <AuthButton
+        type="submit"
+        :isLoading="loading"
+      >
+        Sign Up
       </AuthButton>
     </form>
 

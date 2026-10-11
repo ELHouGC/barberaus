@@ -7,7 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex min-h-screen w-full items-center justify-center bg-[#09090B] px-4 py-10">
+  <div class="flex min-h-[100dvh] w-full items-center justify-center bg-[#09090B] px-4 py-10">
     <div class="w-full max-w-md rounded-xl border border-[#27272A] bg-[#18181B] p-8 shadow-[0_20px_25px_-5px_rgba(0,0,0,0.5)]">
       
       <div v-if="!hideHeaderIcon" class="mb-6 flex flex-col items-center gap-2">
