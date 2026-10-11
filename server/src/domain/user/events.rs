@@ -1,7 +1,9 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use cqrs_es::DomainEvent;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::domain::user::account_aggregate::Gender;
 // -----------------------------------------------------------------------------
 // User Events
 // -----------------------------------------------------------------------------
@@ -12,6 +14,10 @@ pub enum UserAccountEvent {
         user_id: Uuid,
         email: String,
         full_name: String,
+        #[serde(default)]
+        date_of_birth: Option<NaiveDate>,
+        #[serde(default)]
+        gender: Option<Gender>,
         #[serde(default = "default_registered_at")]
         registered_at: DateTime<Utc>,
     },

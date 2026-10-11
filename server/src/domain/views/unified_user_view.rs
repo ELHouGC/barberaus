@@ -1,9 +1,9 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use cqrs_es::{EventEnvelope, View};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::user::account_aggregate::UserAccountAggregate;
+use crate::domain::user::account_aggregate::{Gender, UserAccountAggregate};
 use crate::domain::user::events::UserAccountEvent;
 use crate::domain::user::client_profile_aggregate::ClientProfileAggregate;
 use crate::domain::user::events::ClientProfileEvent;
@@ -24,6 +24,8 @@ pub struct UnifiedUserView {
 pub struct IdentityViewSection {
     pub email: String,
     pub full_name: String,
+    pub date_of_birth: Option<NaiveDate>,
+    pub gender: Option<Gender>,
     pub is_email_verified: bool,
     pub has_client_profile: bool,
     pub has_barber_profile: bool,
@@ -58,12 +60,16 @@ impl View<UserAccountAggregate> for UnifiedUserView {
                 email,
                 full_name,
                 registered_at,
+                date_of_birth,
+                gender,
                 ..
             } => {
                 self.user_id = Some(*user_id);
                 self.identity = Some(IdentityViewSection {
                     email: email.clone(),
                     full_name: full_name.clone(),
+                    date_of_birth: *date_of_birth,
+                    gender: *gender,
                     is_email_verified: false,
                     has_client_profile: false,
                     has_barber_profile: false,

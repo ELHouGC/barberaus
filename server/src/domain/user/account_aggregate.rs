@@ -1,21 +1,30 @@
 
-use chrono::{ Utc};
+use chrono::{ NaiveDate, Utc};
 use cqrs_es::{Aggregate, event_sink::EventSink};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::user::events::UserAccountEvent;
 use crate::domain::errors::UserDomainError;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Gender {
+    Male,
+    Female,
+    PreferNotToSay,
+}
+
 
 // -----------------------------------------------------------------------------
 // Aggregate State
 // -----------------------------------------------------------------------------
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+
 pub struct UserAccountAggregate {
     pub user_id: Option<Uuid>,
     pub email: String,
     pub full_name: String,
-    pub password_hash: String,
+    pub date_of_birth: Option<NaiveDate>,
+    pub gender: Option<Gender>,
     pub is_email_verified: bool,
     pub has_client_profile: bool,
     pub has_barber_profile: bool,
@@ -30,6 +39,8 @@ pub enum UserAccountCommand {
         user_id: Uuid,
         email: String,
         full_name: String,
+        date_of_birth: NaiveDate,
+        gender: Gender,
     },
     VerifyEmail,
     EnableClientProfile,
@@ -62,6 +73,8 @@ impl Aggregate for UserAccountAggregate {
                 user_id,
                 email,
                 full_name,
+                date_of_birth,
+                gender,
             } => {
                 if self.user_id.is_some() {
                     return Err(UserDomainError::AlreadyExists);
@@ -75,6 +88,8 @@ impl Aggregate for UserAccountAggregate {
                         user_id,
                         email,
                         full_name,
+                        date_of_birth: Some(date_of_birth),
+                        gender: Some(gender),
                         registered_at: Utc::now(),
                     },
                     self,
@@ -146,11 +161,15 @@ impl Aggregate for UserAccountAggregate {
                 user_id,
                 email,
                 full_name,
+                date_of_birth,
+                gender,
                 ..
             } => {
                 self.user_id = Some(user_id);
                 self.email = email;
                 self.full_name = full_name;
+                self.date_of_birth = date_of_birth;
+                self.gender = gender;
                 self.is_email_verified = false;
                 self.has_client_profile = false;
                 self.has_barber_profile = false;
