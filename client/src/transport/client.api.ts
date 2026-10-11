@@ -11,7 +11,7 @@ const getBaseUrl = (): string => {
 
   if (import.meta.env.DEV) {
     const isAndroid = isTauri() && /android/i.test(navigator.userAgent);
-    return isAndroid ? 'http://192.168.1.7:8080/api/v1' : 'http://localhost:8080/api/v1';
+    return isAndroid ? 'http://192.168.100.94:8080/api/v1' : 'http://localhost:8080/api/v1';
   }
   return 'https://api.yourdomain.com';
 };
