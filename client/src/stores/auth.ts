@@ -7,7 +7,7 @@ import type {
   VerifyEmailRequest, 
   UserPayload 
 } from '@/transport/auth.contracts'
-import type { s } from 'vue-router/dist/router-CWoNjPRp.mjs'
+import type { ApiErrorResponse } from '@/transport/envelopes'
 
 export const useAuthStore = defineStore('auth', () => {
   // 1. State
@@ -69,37 +69,30 @@ export const useAuthStore = defineStore('auth', () => {
    */
   async function login(credentials: LoginRequest) {
     isLoading.value = true
-    try {
-      const response = await transportApi.login(credentials)
-      const authData = response.data
 
-      if (authData?.access_token) {
-        setSession(authData)
+      const response = await transportApi.login(credentials)
+      if (response.success && response.data && response.data?.access_token) {
+        setSession(response.data)
         return { success: true }
       }
+      else {
+        clearSession()
+        const status = response?.error?.code ;
 
-      return { success: false, errorType: 'invalid' as const }
-    } catch (error: any) {
-      clearSession()
-      const status = error.response?.status
-      const errorMsg = error.response?.data?.error?.message || ''
-
-      if (status === 403 || errorMsg.includes('unverified')) {
-        return {
-          success: false,
-          errorType: 'unverified' as const,
-          userId: error.response?.data?.data?.user_id,
-          email: credentials.email,
+        if (status === "ACCOUNT_NOT_VERIFIED" ) {
+          return {
+            success: false,
+            errorType: 'unverified' as const,
+            userId: response?.error?.user_id,
+            email: credentials.email,
+          }
         }
-      }
 
-      if (status === 401 || status === 400) {
-        return { success: false, errorType: 'invalid' as const }
-      }
+        else if (status === "INVALID_CREDENTIALS") {
+          return { success: false, errorType: 'invalid' as const }
+        }
 
-      return { success: false, errorType: 'network_error' as const }
-    } finally {
-      isLoading.value = false
+        return { success: false, errorType: 'network_error' as const }
     }
   }
 

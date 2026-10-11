@@ -17,10 +17,14 @@ export interface AuthResponse {
   user: UserPayload;
 }
 
+export type SignupGender = 'Male' | 'Female' | 'PreferNotToSay'
+
 export interface SignupRequest {
-  email: string;
-  password?: string;
-  full_name: string;
+  full_name: string
+  email: string
+  password: string
+  date_of_birth: string // ISO date string "YYYY-MM-DD"
+  gender: SignupGender
 }
 
 export interface SignupResponse {

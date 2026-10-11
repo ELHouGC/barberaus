@@ -44,10 +44,7 @@ export const transportApi = {
   async login(credentials: LoginRequest): Promise<ApiResponse<AuthResponse>> {
     try {
       const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', credentials);
-      if (response.success && response.data) {
-        const authStore = useAuthStore();
-        authStore.setSession(response.data);
-      }
+
       return response;
     } catch (err) {
       return handleApiError(err);
