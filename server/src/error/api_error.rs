@@ -44,5 +44,4 @@ pub enum ApiError {
     // Input Validation Failure
     #[error("Validation error: {0}")]
     InvalidInput(String),
-
 }

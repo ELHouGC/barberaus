@@ -88,7 +88,7 @@ impl IntoResponse for ApiError {
                 Some(user_id),
             ),
             ApiError::UserNotFound => (
-                StatusCode::OK,
+                StatusCode::UNPROCESSABLE_ENTITY,
                 "USER_NOT_FOUND",
                 "User not found.",
                 None,
