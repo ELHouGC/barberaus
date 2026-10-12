@@ -9,10 +9,7 @@ use resend_rs::Method;
 use transport::http;
 mod application;
 
-
-use axum::{
-    Router, http::header, routing::get,
-};
+use axum::{Router, http::header, routing::get};
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
@@ -69,7 +66,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/health", get(health_check))
-        .merge(http::router::auth::create_router(app_state))
+        .merge(http::router::auth::create_router(app_state.clone()))
+        .merge(http::router::upload::create_router(
+            app_state.cloudinary.clone(),
+        ))
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
