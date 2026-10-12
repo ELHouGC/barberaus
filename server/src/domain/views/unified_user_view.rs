@@ -34,6 +34,7 @@ pub struct IdentityViewSection {
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ClientProfileViewSection {
     pub is_initialized: bool,
+    pub avatar_url: Option<String>,
     pub onboarding_completed: bool,
     pub city: Option<String>,
     pub search_radius_km: i32,
@@ -110,6 +111,7 @@ impl View<ClientProfileAggregate> for UnifiedUserView {
             ClientProfileEvent::ClientProfileInitialized { created_at, .. } => {
                 self.client_profile = Some(ClientProfileViewSection {
                     is_initialized: true,
+                    avatar_url: None,
                     onboarding_completed: false,
                     city: None,
                     search_radius_km: 10, // Default search radius
@@ -117,6 +119,11 @@ impl View<ClientProfileAggregate> for UnifiedUserView {
                     followed_barber_ids: Vec::new(),
                 });
                 self.updated_at = Some(*created_at);
+            }
+            ClientProfileEvent::AvatarUpdated { avatar_url } => {
+                if let Some(profile) = &mut self.client_profile {
+                    profile.avatar_url = Some(avatar_url.clone());
+                }
             }
 
             ClientProfileEvent::ClientOnboarded {

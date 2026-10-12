@@ -4,15 +4,11 @@ use std::sync::Arc;
 
 use crate::{
     application::{
-        auth_app::AuthApp,
-        services::{
+        auth_app::AuthApp, client_profile_app::ClientProfileApp, services::{
             cloudinary_service::CloudinaryService,
             email_verification::{EmailSender, EmailVerificationService},
         },
-    },
-    config::Config,
-    cqrs::{ClientProfileCqrsFramework, UserViewRepository, create_cqrs_framework},
-    infrastructure::{
+    }, config::Config, cqrs::{UserViewRepository, create_cqrs_framework}, infrastructure::{
         argon2_password_hasher::Argon2PasswordHasher,
         email_sender::{ConsoleEmailSender, ResendEmailSender},
         persistence::{
@@ -25,11 +21,11 @@ use crate::{
 #[derive(Clone)]
 pub struct AppState {
     pub auth_app: AuthApp,
-    pub client_profile_cqrs_framework: Arc<ClientProfileCqrsFramework>,
+    pub client_profile_app: Arc<ClientProfileApp>,
     pub user_view_repo: Arc<UserViewRepository>, // Exposed for query/read endpoints
     pub redis_pool: RedisPool,
     pub config: Config,
-    pub cloudinary: Arc<CloudinaryService>,
+    
 }
 
 impl AppState {
@@ -58,17 +54,22 @@ impl AppState {
         let password_hasher = Arc::new(Argon2PasswordHasher);
 
         let auth_app = AuthApp::new(auth_repo, password_hasher, user_cqrs, verification_service);
+        let cloudinary_service = Arc::new(CloudinaryService::new().expect("Failed to initialize Cloudinary service"));
+   
 
-        let cloudinary_service =
-            CloudinaryService::new().expect("Failed to initialize Cloudinary service");
+        let client_profile_app = Arc::new(ClientProfileApp::new(
+            client_profile_cqrs_framework, cloudinary_service, 
+    
+        ));
+        
 
         Self {
             auth_app,
-            client_profile_cqrs_framework,
+            client_profile_app,
             user_view_repo,
             redis_pool,
             config,
-            cloudinary: Arc::new(cloudinary_service),
+           
         }
     }
 }

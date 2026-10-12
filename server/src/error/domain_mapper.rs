@@ -23,6 +23,9 @@ impl From<AggregateError<ClientDomainError>> for ApiError {
                     ApiError::InvalidInput("Already following this barber".to_string())
                 }
                 ClientDomainError::InvalidState => ApiError::InternalServerError,
+                ClientDomainError::InvalidAvatarUrl => {
+                    ApiError::InvalidInput("Invalid avatar URL provided".to_string())
+                }
             },
 
             // 2. Concurrency conflict / Optimistic lock failure

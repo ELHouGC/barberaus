@@ -13,6 +13,7 @@ use crate::domain::errors::ClientDomainError;
 pub struct ClientProfileAggregate {
     pub client_id: Option<Uuid>,
     pub is_initialized: bool,
+    pub avatar_url: Option<String>,
     pub onboarding_completed: bool,
     pub city: Option<String>,
     pub search_radius_km: i32,
@@ -28,6 +29,7 @@ pub enum ClientProfileCommand {
     InitializeProfile {
         client_id: Uuid,
     },
+    UpdateAvatar { user_id: String, avatar_url: String },
     CompleteOnboarding {
         city: String,
         search_radius_km: i32,
@@ -71,7 +73,14 @@ impl Aggregate for ClientProfileAggregate {
                 )
                 .await;
             }
-
+            ClientProfileCommand::UpdateAvatar { avatar_url, .. } => {
+                if self.is_initialized == false {
+                    return Err(ClientDomainError::ProfileNotInitialized);
+                }
+                if avatar_url.is_empty() {
+                    return Err(ClientDomainError::InvalidAvatarUrl);
+                }
+            }
             ClientProfileCommand::CompleteOnboarding {
                 city,
                 search_radius_km,
@@ -136,7 +145,9 @@ impl Aggregate for ClientProfileAggregate {
                 self.client_id = Some(client_id);
                 self.is_initialized = true;
             }
-
+            ClientProfileEvent::AvatarUpdated { avatar_url } => {
+                self.avatar_url = Some(avatar_url);
+            }
             ClientProfileEvent::ClientOnboarded {
                 city,
                 search_radius_km,
@@ -169,6 +180,7 @@ impl DomainEvent for ClientProfileEvent {
             ClientProfileEvent::ClientProfileInitialized { .. } => {
                 "ClientProfileInitialized".to_string()
             }
+            ClientProfileEvent::AvatarUpdated { .. } => "AvatarUpdated".to_string(),
             ClientProfileEvent::ClientOnboarded { .. } => "ClientOnboarded".to_string(),
             ClientProfileEvent::BarberFollowed { .. } => "BarberFollowed".to_string(),
         }
@@ -177,6 +189,7 @@ impl DomainEvent for ClientProfileEvent {
     fn event_version(&self) -> String {
         match self {
             ClientProfileEvent::ClientProfileInitialized { .. } => "1.0".to_string(),
+            ClientProfileEvent::AvatarUpdated { .. } => "1.0".to_string(),
             ClientProfileEvent::ClientOnboarded { .. } => "1.0".to_string(),
             ClientProfileEvent::BarberFollowed { .. } => "1.0".to_string(),
         }

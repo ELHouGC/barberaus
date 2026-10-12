@@ -109,6 +109,7 @@ impl IntoResponse for ApiError {
                 "An unexpected internal error occurred.",
                 None,
             ),
+       
         };
 
         let response_body: ApiResponse<()> = ApiResponse::error(code, message, user_id);

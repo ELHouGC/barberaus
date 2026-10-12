@@ -1,6 +1,6 @@
 use axum::{
     Router, middleware,
-    routing::{get, post},
+    routing::post,
 };
 
 use crate::{
@@ -10,7 +10,6 @@ use crate::{
             auth_handlers::{
                 login, logout, refresh_token, resend_verification, signup, verify_email,
             },
-            onboarding_handler::complete_onboarding,
         },
         middlewares::auth::require_auth,
     },
@@ -27,7 +26,6 @@ pub fn create_router(app_state: AppState) -> Router {
 
     // Protected Routes (All routes inside get perimeter defense)
     let protected_routes = Router::new()
-        .route("/client/onboarding", post(complete_onboarding))
         .route("/auth/session/logout", post(logout))
         // .route("/profile", get(get_profile))
         .route_layer(middleware::from_fn_with_state(

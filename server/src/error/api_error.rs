@@ -1,5 +1,6 @@
 use thiserror::Error;
 use uuid::Uuid;
+
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 
@@ -43,4 +44,5 @@ pub enum ApiError {
     // Input Validation Failure
     #[error("Validation error: {0}")]
     InvalidInput(String),
+
 }

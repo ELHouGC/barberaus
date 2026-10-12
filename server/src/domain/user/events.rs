@@ -64,6 +64,7 @@ pub enum ClientProfileEvent {
         client_id: Uuid,
         created_at: DateTime<Utc>,
     },
+    AvatarUpdated { avatar_url: String },
     ClientOnboarded {
         client_id: Uuid,
         city: String,

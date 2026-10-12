@@ -6,7 +6,7 @@ use crate::{error::ApiError, infrastructure::jwt::Claims};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthContext {
-    claims: Claims,
+    pub claims: Claims,
     // Future expansion:
     // pub roles: Vec<String>,
     // pub permissions: Vec<String>,

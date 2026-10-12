@@ -4,7 +4,7 @@ use postgres_es::{PostgresEventRepository, PostgresViewRepository};
 use sqlx::PgPool;
 use std::sync::Arc;
 
-use crate::application::segas::Email_verification::EmailVerificationSaga;
+use crate::application::segas::email_verification::EmailVerificationSaga;
 use crate::domain::user::{
     account_aggregate::UserAccountAggregate, client_profile_aggregate::ClientProfileAggregate,
 };

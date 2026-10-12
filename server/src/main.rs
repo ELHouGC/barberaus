@@ -67,8 +67,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/health", get(health_check))
         .merge(http::router::auth::create_router(app_state.clone()))
-        .merge(http::router::upload::create_router(
-            app_state.cloudinary.clone(),
+        .merge(http::router::client_profile::create_router(
+            app_state.clone(),
         ))
         .layer(cors);
 
@@ -77,6 +77,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
-
     Ok(())
 }

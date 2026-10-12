@@ -1,10 +1,9 @@
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use validator::Validate;
 
 use crate::{
-    domain::user::{account_aggregate::Gender, client_profile_aggregate::ClientProfileCommand},
+    domain::user::{account_aggregate::Gender},
     error::ApiError,
 };
 
@@ -90,64 +89,5 @@ pub struct UserPayload {
 
 #[derive(Serialize)]
 pub struct MessageResponse {
-    pub message: String,
-}
-
-// -----------------------------------------------------------------------------
-//  Final Auth Stage .
-// -----------------------------------------------------------------------------
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompleteOnboardingRequest {
-    pub city: String,
-    pub search_radius_km: Option<i32>,
-    pub selected_styles: Vec<String>,
-    #[serde(default)]
-    pub followed_barber_ids: Vec<Uuid>,
-}
-
-impl CompleteOnboardingRequest {
-    /// Validates input prior to database or aggregate execution
-    pub fn validate(&self, user_id: Uuid) -> Result<(), ApiError> {
-        if self.city.trim().is_empty() {
-            return Err(ApiError::InvalidInput("City is required.".to_string()));
-        }
-
-        if let Some(radius) = self.search_radius_km {
-            if !(1..=500).contains(&radius) {
-                return Err(ApiError::InvalidInput(
-                    "Search radius must be between 1 and 500 km.".to_string(),
-                ));
-            }
-        }
-
-        if self.selected_styles.is_empty() {
-            return Err(ApiError::InvalidInput(
-                "At least one haircut style must be selected.".to_string(),
-            ));
-        }
-
-        if self.followed_barber_ids.contains(&user_id) {
-            return Err(ApiError::InvalidInput(
-                "You cannot follow your own profile.".to_string(),
-            ));
-        }
-
-        Ok(())
-    }
-
-    pub fn into_command(self) -> ClientProfileCommand {
-        ClientProfileCommand::CompleteOnboarding {
-            city: self.city.trim().to_string(),
-            search_radius_km: self.search_radius_km.unwrap_or(10),
-            selected_styles: self.selected_styles,
-            followed_barber_ids: self.followed_barber_ids,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OnboardingResponse {
-    pub client_id: Uuid,
     pub message: String,
 }

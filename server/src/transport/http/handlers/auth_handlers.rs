@@ -6,8 +6,8 @@ use crate::{
     state::AppState,
     transport::{
         dto::auth::{
-            AuthResponse, CompleteOnboardingRequest, LoginRequest, MessageResponse,
-            OnboardingResponse, ResendVerificationRequest, Session, SignupRequest, SignupResponse,
+            AuthResponse , LoginRequest, MessageResponse,
+            ResendVerificationRequest, Session, SignupRequest, SignupResponse,
             VerifyEmailRequest,
         },
         middlewares::{auth_context::AuthContext, auth_cookies, refresh_token::RefreshToken},

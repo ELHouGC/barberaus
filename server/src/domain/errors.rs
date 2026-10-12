@@ -77,4 +77,6 @@ pub enum ClientDomainError {
 
     #[error("Aggregate reached an invalid internal state")]
     InvalidState,
+    #[error("Invalid avatar URL provided")]
+    InvalidAvatarUrl,
 }
