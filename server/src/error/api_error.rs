@@ -3,7 +3,6 @@ use uuid::Uuid;
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 
-
 pub enum ApiError {
     #[error("Authentication token is missing")]
     MissingToken,
@@ -40,7 +39,7 @@ pub enum ApiError {
     #[error("Account is not verified")]
     AccountNotVerified { user_id: Uuid },
     #[error("User not found")]
-    UserNotFound ,
+    UserNotFound,
     // Input Validation Failure
     #[error("Validation error: {0}")]
     InvalidInput(String),

@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::domain::user::account_aggregate::{Gender, UserAccountAggregate};
-use crate::domain::user::events::UserAccountEvent;
 use crate::domain::user::client_profile_aggregate::ClientProfileAggregate;
 use crate::domain::user::events::ClientProfileEvent;
+use crate::domain::user::events::UserAccountEvent;
 
 // -----------------------------------------------------------------------------
 // Unified View Data Structure

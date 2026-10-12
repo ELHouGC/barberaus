@@ -3,7 +3,7 @@ use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode}
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize , Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: Uuid,
     pub jti: String,
@@ -17,7 +17,7 @@ pub fn mint_token(user_id: Uuid, profile: &str, secret: &str) -> Result<String, 
         .expect("valid timestamp")
         .timestamp() as usize;
     let jti = Uuid::new_v4().to_string();
-    println!(" jti: {}",  jti);
+    println!(" jti: {}", jti);
     let claims = Claims {
         sub: user_id,
         jti: jti,

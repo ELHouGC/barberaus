@@ -4,9 +4,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{
-    application::ports::email_verification_repository::{
-        EmailVerification, EmailVerificationRepo,
-    },
+    application::ports::email_verification_repository::{EmailVerification, EmailVerificationRepo},
     error::ApiError,
 };
 

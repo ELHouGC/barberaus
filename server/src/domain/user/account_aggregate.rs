@@ -1,18 +1,16 @@
-
-use chrono::{ NaiveDate, Utc};
+use chrono::{NaiveDate, Utc};
 use cqrs_es::{Aggregate, event_sink::EventSink};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::user::events::UserAccountEvent;
 use crate::domain::errors::UserDomainError;
+use crate::domain::user::events::UserAccountEvent;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Gender {
     Male,
     Female,
     PreferNotToSay,
 }
-
 
 // -----------------------------------------------------------------------------
 // Aggregate State
@@ -46,9 +44,6 @@ pub enum UserAccountCommand {
     EnableClientProfile,
     EnableBarberProfile,
 }
-
-
-
 
 // -----------------------------------------------------------------------------
 // Aggregate Logic Implementation

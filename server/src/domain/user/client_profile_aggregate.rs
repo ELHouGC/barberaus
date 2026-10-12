@@ -1,9 +1,8 @@
-
-use chrono:: Utc;
+use crate::domain::user::events::ClientProfileEvent;
+use chrono::Utc;
 use cqrs_es::{Aggregate, DomainEvent, event_sink::EventSink};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::domain::user::events::ClientProfileEvent;
 
 use crate::domain::errors::ClientDomainError;
 
@@ -40,7 +39,6 @@ pub enum ClientProfileCommand {
     },
 }
 
-
 // -----------------------------------------------------------------------------
 // Aggregate Logic Implementation
 // -----------------------------------------------------------------------------
@@ -50,8 +48,7 @@ impl Aggregate for ClientProfileAggregate {
     type Event = ClientProfileEvent;
     type Error = ClientDomainError;
     type Services = ();
-const TYPE: &'static str = "ClientProfile";
-
+    const TYPE: &'static str = "ClientProfile";
 
     async fn handle(
         &mut self,

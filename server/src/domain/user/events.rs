@@ -35,8 +35,6 @@ pub enum UserAccountEvent {
     },
 }
 
-
-
 impl DomainEvent for UserAccountEvent {
     fn event_type(&self) -> String {
         match self {
@@ -56,12 +54,6 @@ impl DomainEvent for UserAccountEvent {
         }
     }
 }
-
-
-
-
-
-
 
 // -----------------------------------------------------------------------------
 // Client Events
@@ -86,9 +78,6 @@ pub enum ClientProfileEvent {
         followed_at: DateTime<Utc>,
     },
 }
-
-
-
 
 fn default_registered_at() -> DateTime<Utc> {
     DateTime::from_timestamp(0, 0).unwrap_or_else(Utc::now)

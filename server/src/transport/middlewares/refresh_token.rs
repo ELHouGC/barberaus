@@ -24,11 +24,7 @@ where
 {
     type Rejection = ApiError;
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-       
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         // 1. Try extracting from custom `X-Refresh-Token` header
         if let Some(token) = parts
             .headers
@@ -54,10 +50,9 @@ where
                         return Ok(RefreshToken(token.to_string()));
                     }
                 }
-                 println!("Extracting refresh token was empty");
+                println!("Extracting refresh token was empty");
             }
         }
-       
 
         Err(ApiError::MissingToken)
     }

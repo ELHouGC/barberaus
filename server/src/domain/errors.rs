@@ -58,8 +58,6 @@ pub enum UserDomainError {
     InvalidState,
 }
 
-
-
 #[derive(Debug, Clone, PartialEq, Eq, Error, Serialize, Deserialize)]
 pub enum ClientDomainError {
     #[error("Client profile is already initialized")]

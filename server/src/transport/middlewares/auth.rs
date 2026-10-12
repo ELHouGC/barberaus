@@ -5,12 +5,7 @@ use axum::{
 };
 use deadpool_redis::redis::cmd;
 
-use crate::{
-    error::ApiError,
-    infrastructure::jwt,
-    state::AppState,
-
-};
+use crate::{error::ApiError, infrastructure::jwt, state::AppState};
 
 pub async fn require_auth(
     State(state): State<AppState>,
@@ -49,9 +44,6 @@ pub async fn require_auth(
     if is_blacklisted {
         return Err(ApiError::InvalidToken);
     }
-
-
-  
 
     // 5. Inject AuthContext into Request Extensions for downstream handlers
     req.extensions_mut().insert(claims.clone());

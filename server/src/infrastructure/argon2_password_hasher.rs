@@ -1,4 +1,6 @@
-use crate::{application::services::password_hasher_service::PasswordHasherService, error::ApiError};
+use crate::{
+    application::services::password_hasher_service::PasswordHasherService, error::ApiError,
+};
 use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},

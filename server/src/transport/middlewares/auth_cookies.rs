@@ -1,4 +1,4 @@
-use axum::http::{header, HeaderMap, HeaderValue};
+use axum::http::{HeaderMap, HeaderValue, header};
 
 const SEVEN_DAYS_IN_SECONDS: usize = 604_800;
 
@@ -23,14 +23,11 @@ pub fn create_refresh_cookie(refresh_token: &str) -> Result<HeaderMap, crate::er
 
 pub fn clear_refresh_cookie() -> HeaderMap {
     let mut headers = HeaderMap::new();
-    
+
     // Max-Age=0 instantly deletes the cookie in the user's browser
     let cookie_value = "refresh_token=; HttpOnly;  SameSite=Lax; Path=/api/v1/auth/; Max-Age=0";
 
-    headers.insert(
-        header::SET_COOKIE,
-        HeaderValue::from_static(cookie_value),
-    );
+    headers.insert(header::SET_COOKIE, HeaderValue::from_static(cookie_value));
 
     headers
 }

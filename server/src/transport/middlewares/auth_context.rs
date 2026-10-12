@@ -1,12 +1,8 @@
-use axum::{
-    extract::FromRequestParts,
-    http::request::Parts,
-};
+use axum::{extract::FromRequestParts, http::request::Parts};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{error::ApiError, infrastructure::jwt::Claims};
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthContext {
@@ -17,12 +13,8 @@ pub struct AuthContext {
 }
 #[allow(dead_code)]
 impl AuthContext {
-    pub fn new(
-        claims : Claims,
-    ) -> Self {
-        Self {
-            claims: claims,
-        }
+    pub fn new(claims: Claims) -> Self {
+        Self { claims: claims }
     }
 
     pub fn user_id(&self) -> Uuid {
@@ -49,10 +41,7 @@ where
 {
     type Rejection = ApiError;
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let claims = parts
             .extensions
             .get::<Claims>()
@@ -62,5 +51,3 @@ where
         Ok(AuthContext::new(claims))
     }
 }
-
-

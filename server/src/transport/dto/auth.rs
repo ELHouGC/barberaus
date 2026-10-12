@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::{domain::user::{account_aggregate::Gender, client_profile_aggregate::ClientProfileCommand}, error::ApiError};
-
-
-
+use crate::{
+    domain::user::{account_aggregate::Gender, client_profile_aggregate::ClientProfileCommand},
+    error::ApiError,
+};
 
 #[derive(Debug, Deserialize)]
 pub struct SignupRequest {
@@ -26,13 +26,18 @@ impl SignupRequest {
 
         let now = Utc::now().date_naive();
         if self.date_of_birth >= now {
-            return Err(ApiError::InvalidInput("Date of birth must be in the past".into()));
+            return Err(ApiError::InvalidInput(
+                "Date of birth must be in the past".into(),
+            ));
         }
 
         // Calculate age
         let age = now.years_since(self.date_of_birth).unwrap_or(0);
-        if age < 13 { // Set your enforcement boundary here (e.g., 13, 16, or 18)
-            return Err(ApiError::InvalidInput("User does not meet the minimum age requirement".into()));
+        if age < 13 {
+            // Set your enforcement boundary here (e.g., 13, 16, or 18)
+            return Err(ApiError::InvalidInput(
+                "User does not meet the minimum age requirement".into(),
+            ));
         }
         Ok(())
     }
@@ -65,7 +70,7 @@ pub struct LoginRequest {
 #[derive(Serialize)]
 pub struct Session {
     pub access_token: String,
-    pub refresh_token:String,
+    pub refresh_token: String,
     pub token_type: String,
     pub user: UserPayload,
 }
@@ -82,7 +87,6 @@ pub struct UserPayload {
     pub user_id: Uuid,
     pub is_barber_profile_active: bool,
 }
-
 
 #[derive(Serialize)]
 pub struct MessageResponse {

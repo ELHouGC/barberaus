@@ -1,9 +1,11 @@
-use deadpool_redis::{redis::cmd, Pool};
+use deadpool_redis::{Pool, redis::cmd};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    error::ApiError, infrastructure::jwt, transport::dto::auth::{ Session, UserPayload},
+    error::ApiError,
+    infrastructure::jwt,
+    transport::dto::auth::{Session, UserPayload},
 };
 
 const REFRESH_TOKEN_TTL_SECONDS: usize = 604_800; // 7 days
@@ -32,7 +34,10 @@ pub async fn create_session(
     };
     let meta_json = serde_json::to_string(&meta).map_err(|_| ApiError::Unexpected)?;
 
-    let mut conn = redis_pool.get().await.map_err(|_| ApiError::DatabaseError)?;
+    let mut conn = redis_pool
+        .get()
+        .await
+        .map_err(|_| ApiError::DatabaseError)?;
     let redis_key = format!("refresh:{}", refresh_token);
 
     let _: () = cmd("SETEX")
@@ -65,7 +70,10 @@ pub async fn rotate_session(
     old_refresh_token: &str,
     jwt_secret: &str,
 ) -> Result<Session, ApiError> {
-    let mut conn = redis_pool.get().await.map_err(|_| ApiError::DatabaseError)?;
+    let mut conn = redis_pool
+        .get()
+        .await
+        .map_err(|_| ApiError::DatabaseError)?;
     let old_key = format!("refresh:{}", old_refresh_token);
 
     // 1. Retrieve existing session metadata
@@ -104,7 +112,10 @@ pub async fn terminate_session(
     exp: usize,
     refresh_token: Option<&str>,
 ) -> Result<(), ApiError> {
-    let mut conn = redis_pool.get().await.map_err(|_| ApiError::DatabaseError)?;
+    let mut conn = redis_pool
+        .get()
+        .await
+        .map_err(|_| ApiError::DatabaseError)?;
 
     // A. Blacklist active Access Token
     let now = chrono::Utc::now().timestamp() as usize;
@@ -131,4 +142,3 @@ pub async fn terminate_session(
 
     Ok(())
 }
-
