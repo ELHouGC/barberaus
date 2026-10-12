@@ -1,12 +1,18 @@
 use axum::{
-    middleware,
+    Router, middleware,
     routing::{get, post},
-    Router,
 };
 
 use crate::{
-    state::AppState, transport::{
-        http::handler::{auth_handlers::{login, logout, refresh_token, resend_verification, signup, verify_email}, onboarding_handler::complete_onboarding}, middlewares::auth::require_auth,
+    state::AppState,
+    transport::{
+        http::handlers::{
+            auth_handlers::{
+                login, logout, refresh_token, resend_verification, signup, verify_email,
+            },
+            onboarding_handler::complete_onboarding,
+        },
+        middlewares::auth::require_auth,
     },
 };
 

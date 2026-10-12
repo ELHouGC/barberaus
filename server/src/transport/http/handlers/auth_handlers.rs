@@ -1,10 +1,17 @@
 use axum::{Json, extract::State, http::HeaderMap};
 
 use crate::{
-    error::ApiError, infrastructure::redis::session_management::{self}, state::AppState, transport::{
+    error::ApiError,
+    infrastructure::redis::session_management::{self},
+    state::AppState,
+    transport::{
         dto::auth::{
-            AuthResponse, CompleteOnboardingRequest, LoginRequest, MessageResponse, OnboardingResponse, ResendVerificationRequest, Session, SignupRequest, SignupResponse, VerifyEmailRequest,
-        }, middlewares::{auth_context::AuthContext, auth_cookies, refresh_token::RefreshToken}, response::ApiResponse,
+            AuthResponse, CompleteOnboardingRequest, LoginRequest, MessageResponse,
+            OnboardingResponse, ResendVerificationRequest, Session, SignupRequest, SignupResponse,
+            VerifyEmailRequest,
+        },
+        middlewares::{auth_context::AuthContext, auth_cookies, refresh_token::RefreshToken},
+        response::ApiResponse,
     },
 };
 
@@ -28,7 +35,9 @@ pub async fn verify_email(
     let session = session_management::create_session(
         &state.redis_pool,
         res.user_id,
-        res.is_barber_profile_active.then(|| "BARBER").unwrap_or("CLIENT"),
+        res.is_barber_profile_active
+            .then(|| "BARBER")
+            .unwrap_or("CLIENT"),
         &state.config.jwt_secret,
     )
     .await?;
@@ -37,7 +46,14 @@ pub async fn verify_email(
     let headers = auth_cookies::create_refresh_cookie(&session.refresh_token)?;
 
     // 4. Return both the cookie header AND the JSON response (access_token + user data)
-    Ok((headers, Json(ApiResponse::success(AuthResponse { access_token: session.access_token, token_type: session.token_type, user: session.user }))))
+    Ok((
+        headers,
+        Json(ApiResponse::success(AuthResponse {
+            access_token: session.access_token,
+            token_type: session.token_type,
+            user: session.user,
+        })),
+    ))
 }
 
 pub async fn resend_verification(
@@ -54,11 +70,13 @@ pub async fn login(
 ) -> Result<(HeaderMap, Json<ApiResponse<AuthResponse>>), ApiError> {
     println!("hited from app");
     let res = state.auth_app.login(payload).await?;
-     // 2. Create dual-token session in Redis
+    // 2. Create dual-token session in Redis
     let session = session_management::create_session(
         &state.redis_pool,
         res.user_id,
-        res.is_barber_profile_active.then(|| "BARBER").unwrap_or("CLIENT"),
+        res.is_barber_profile_active
+            .then(|| "BARBER")
+            .unwrap_or("CLIENT"),
         &state.config.jwt_secret,
     )
     .await?;
@@ -67,8 +85,14 @@ pub async fn login(
     let headers = auth_cookies::create_refresh_cookie(&session.refresh_token)?;
 
     // 4. Return both the cookie header AND the JSON response (access_token + user data)
-    Ok((headers, Json(ApiResponse::success(AuthResponse { access_token: session.access_token, token_type: session.token_type, user: session.user }))))
-
+    Ok((
+        headers,
+        Json(ApiResponse::success(AuthResponse {
+            access_token: session.access_token,
+            token_type: session.token_type,
+            user: session.user,
+        })),
+    ))
 }
 
 pub async fn logout(
@@ -99,18 +123,30 @@ pub async fn refresh_token(
     refresh_token: RefreshToken,
 ) -> Result<(HeaderMap, Json<ApiResponse<AuthResponse>>), ApiError> {
     // 1. Rotate tokens
-    println!("Rotating session for refresh token: {}", refresh_token.as_str());
+    println!(
+        "Rotating session for refresh token: {}",
+        refresh_token.as_str()
+    );
     let session: Session = session_management::rotate_session(
         &state.redis_pool,
         refresh_token.as_str(),
         &state.config.jwt_secret,
     )
     .await?;
-    println!("Rotating session for refresh token: {}", session.refresh_token);
+    println!(
+        "Rotating session for refresh token: {}",
+        session.refresh_token
+    );
 
     // 2. Build new Set-Cookie header for rotated refresh token
     let headers = auth_cookies::create_refresh_cookie(&session.refresh_token)?;
 
-    Ok((headers, Json(ApiResponse::success(AuthResponse { access_token: session.access_token, token_type: session.token_type, user: session.user }))))
+    Ok((
+        headers,
+        Json(ApiResponse::success(AuthResponse {
+            access_token: session.access_token,
+            token_type: session.token_type,
+            user: session.user,
+        })),
+    ))
 }
-

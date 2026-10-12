@@ -1,11 +1,14 @@
 use axum::{Json, extract::State};
 
-use crate::{error::ApiError, state::AppState, transport::{dto::auth::{CompleteOnboardingRequest, OnboardingResponse}, middlewares::auth_context::AuthContext, response::ApiResponse}};
-
-
-
-
-
+use crate::{
+    error::ApiError,
+    state::AppState,
+    transport::{
+        dto::auth::{CompleteOnboardingRequest, OnboardingResponse},
+        middlewares::auth_context::AuthContext,
+        response::ApiResponse,
+    },
+};
 
 pub async fn complete_onboarding(
     State(state): State<AppState>,
