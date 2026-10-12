@@ -3,17 +3,22 @@ use sqlx::PgPool;
 use std::sync::Arc;
 
 use crate::{
-    application::auth_app::AuthApp,
+    application::{
+        auth_app::AuthApp,
+        services::{
+            cloudinary_service::CloudinaryService,
+            email_verification::{EmailSender, EmailVerificationService},
+        },
+    },
     config::Config,
     cqrs::{ClientProfileCqrsFramework, UserViewRepository, create_cqrs_framework},
-    application::services::email_verification::{EmailSender, EmailVerificationService},
-    infrastructure::persistence::{
-        pg_auth_repository::PgUserAuthRepository,
-        pg_email_verification_repository::PostgresEmailVerificationRepo,
-    },
     infrastructure::{
         argon2_password_hasher::Argon2PasswordHasher,
         email_sender::{ConsoleEmailSender, ResendEmailSender},
+        persistence::{
+            pg_auth_repository::PgUserAuthRepository,
+            pg_email_verification_repository::PostgresEmailVerificationRepo,
+        },
     },
 };
 
@@ -24,6 +29,7 @@ pub struct AppState {
     pub user_view_repo: Arc<UserViewRepository>, // Exposed for query/read endpoints
     pub redis_pool: RedisPool,
     pub config: Config,
+    pub cloudinary: Arc<CloudinaryService>,
 }
 
 impl AppState {
@@ -53,12 +59,16 @@ impl AppState {
 
         let auth_app = AuthApp::new(auth_repo, password_hasher, user_cqrs, verification_service);
 
+        let cloudinary_service =
+            CloudinaryService::new().expect("Failed to initialize Cloudinary service");
+
         Self {
             auth_app,
             client_profile_cqrs_framework,
             user_view_repo,
             redis_pool,
             config,
+            cloudinary: Arc::new(cloudinary_service),
         }
     }
 }
