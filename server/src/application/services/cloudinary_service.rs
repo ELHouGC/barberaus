@@ -1,24 +1,17 @@
-// services/cloudinary_service.rs
-use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::transport::dto::client_profile::SignatureResponse;
+
 #[derive(Clone)]
 pub struct CloudinaryService {
-    cloud_name: String,
+    pub cloud_name: String,
     api_key: String,
     api_secret: String,
 }
 
-#[derive(Serialize)]
-pub struct SignatureResponse {
-    pub signature: String,
-    pub timestamp: u64,
-    pub api_key: String,
-    pub cloud_name: String,
-    pub folder: String,
-}
+
 
 impl CloudinaryService {
     pub fn new() -> Result<Self, String> {
