@@ -1,3 +1,16 @@
+// application/services/email_verification.rs
+//
+// STYLE RULES FOR THIS FILE
+// -------------------------
+// 1. The service is where "nothing found" gets a business meaning:
+//    - for signup it means "create a code"  (not an error at all),
+//    - for verify it means "invalid token"  (-> AppError::Verification).
+// 2. The service returns `AppError`. Repository failures are converted
+//    automatically by `?` thanks to `impl From<RepoError> for AppError`.
+// 3. The service logs important BUSINESS events (`info!`), never errors:
+//    errors are logged once in `problem.rs`.
+// 4. Never log emails, codes or hashes (personal data / secrets).
+
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use rand::Rng;
@@ -5,9 +18,11 @@ use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{
-    application::ports::email_verification_repository::{EmailVerification, EmailVerificationRepo},
-    error::ApiError,
+use crate::application::{
+    error::{AppError, AuthError, ConflictKind, VerificationError},
+    ports::email_verification_repository::{
+        ActivationOutcome, EmailVerification, EmailVerificationRepo,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -19,10 +34,14 @@ pub struct EmailMessage {
     pub html_body: Option<String>,
 }
 
+/// Adapters implementing this trait should report a provider outage as
+/// `AppError::Unavailable { dependency: "email_provider", source }` (-> HTTP 503)
+/// and anything unexpected as `AppError::internal(e)` (-> HTTP 500).
 #[async_trait]
 pub trait EmailSender: Send + Sync {
-    async fn send(&self, message: EmailMessage) -> Result<(), ApiError>;
+    async fn send(&self, message: EmailMessage) -> Result<(), AppError>;
 }
+
 #[derive(Clone)]
 pub struct EmailVerificationService {
     repo: Arc<dyn EmailVerificationRepo>,
@@ -55,23 +74,30 @@ impl EmailVerificationService {
         hex::encode(hasher.finalize())
     }
 
-    /// Primary entry point for Signup flow
+    /// Primary entry point for Signup flow.
+    // `skip_all` + explicit field: we record `user_id` but NOT `user_email` (personal data).
+    #[tracing::instrument(skip_all, fields(user_id = %user_id))]
     pub async fn prepare_for_verification(
         &self,
         user_id: Uuid,
         user_email: &str,
-    ) -> Result<(), ApiError> {
-        match self.repo.find_pending_by_user(user_id).await {
-            Ok(verification) => {
-                if verification.expires_at > Utc::now() {
-                    return Ok(());
-                }
+    ) -> Result<(), AppError> {
+        // `.await?` -> if the repo failed, a RepoError becomes an AppError and we return.
+        // Otherwise we get an `Option<EmailVerification>` to match on.
+        match self.repo.find_pending_by_user(user_id).await? {
+            // `if ...` after a pattern is a "match guard": this arm only matches
+            // when the condition is true. Code is still valid -> nothing to do.
+            Some(verification) if verification.expires_at > Utc::now() => Ok(()),
 
+            // A pending code exists but it is expired -> replace it and resend.
+            Some(verification) => {
                 self.regenerate_and_send_code(verification.id, user_email)
                     .await
             }
 
-            Err(ApiError::VerificationTokenNotFound) => {
+            // No pending code. Before, this was an `Err(VerificationTokenNotFound)`
+            // that we had to catch; now it is just a normal case.
+            None => {
                 let raw_token = Self::generate_token();
                 let token_hash = Self::hash_token(&raw_token);
                 let expires_at = Utc::now() + Duration::hours(24);
@@ -81,41 +107,41 @@ impl EmailVerificationService {
                 self.repo.create(verification).await?;
                 self.send_code(user_email, &raw_token).await
             }
-
-            Err(err) => Err(err),
         }
     }
 
-    /// Dedicated entry point for Login guard when `!is_account_active`
+    /// Dedicated entry point for Login guard when `!is_account_active`.
+    #[tracing::instrument(skip_all, fields(user_id = %user_id))]
     pub async fn handle_unverified_login_attempt(
         &self,
         user_id: Uuid,
         user_email: &str,
-    ) -> Result<(), ApiError> {
-        match self.repo.find_pending_by_user(user_id).await {
-            Ok(verification) => {
-                if verification.expires_at > Utc::now() {
-                    // Token is active & valid -> proceed to return 403 in handler
-                    return Ok(());
-                }
+    ) -> Result<(), AppError> {
+        match self.repo.find_pending_by_user(user_id).await? {
+            // Token is active & valid -> Ok, the handler answers 403 AccountNotVerified.
+            Some(verification) if verification.expires_at > Utc::now() => Ok(()),
 
-                // Token is expired -> regenerate, update DB, and resend email
+            // Token is expired -> regenerate, update DB, and resend email.
+            Some(verification) => {
                 self.regenerate_and_send_code(verification.id, user_email)
                     .await
             }
 
-            Err(ApiError::VerificationTokenNotFound) => {
-                // Token record was purged by 72h worker or missing -> delete orphaned user
+            // Token record was purged by the 72h worker or is missing -> delete the orphaned user.
+            None => {
                 self.repo.delete_unverified_user(user_id).await?;
-                // Fail with InvalidCredentials so UI prompts re-registration
-                Err(ApiError::InvalidCredentials)
-            }
 
-            Err(err) => Err(err),
+                // A business event worth a log line (note: no email in it).
+                tracing::info!("orphaned unverified user deleted: no pending verification");
+
+                // Fail with InvalidCredentials so the UI prompts re-registration.
+                // Here `Err` is intentional control flow, not a technical failure.
+                Err(AppError::Auth(AuthError::InvalidCredentials))
+            }
         }
     }
 
-    async fn send_code(&self, email: &str, raw_token: &str) -> Result<(), ApiError> {
+    async fn send_code(&self, email: &str, raw_token: &str) -> Result<(), AppError> {
         let message = EmailMessage {
             from: self.email_registration_from.clone(),
             to: vec![email.to_string()],
@@ -126,34 +152,52 @@ impl EmailVerificationService {
         self.email_sender.send(message).await
     }
 
-    pub async fn verify(&self, user_id: Uuid, raw_token: &str) -> Result<(), ApiError> {
+    #[tracing::instrument(skip_all, fields(user_id = %user_id))]
+    pub async fn verify(&self, user_id: Uuid, raw_token: &str) -> Result<(), AppError> {
         let token_hash = Self::hash_token(raw_token);
 
+        // `None` here means "no such code for this user" -> business meaning: invalid token.
+        // `.ok_or(x)` turns `Option<T>` into `Result<T, X>`: `Some(v)` -> `Ok(v)`, `None` -> `Err(x)`.
         let verification = self
             .repo
             .find_by_token_hash_and_user_id(&user_id, &token_hash)
-            .await?;
+            .await?
+            .ok_or(AppError::Verification(VerificationError::InvalidToken))?;
 
         if verification.verified_at.is_some() {
-            return Err(ApiError::InvalidVerificationToken);
+            return Err(AppError::Verification(VerificationError::InvalidToken));
         }
 
         if verification.expires_at < Utc::now() {
-            return Err(ApiError::VerificationTokenExpired);
+            return Err(AppError::Verification(VerificationError::Expired));
         }
 
-        self.repo
+        // The repo reports WHAT happened; the service decides which error it is.
+        // `match` forces us to handle every variant: add a new outcome and the
+        // compiler tells us where we forgot it.
+        match self
+            .repo
             .verify_and_activate_user(verification.id, user_id)
-            .await?;
-
-        Ok(())
+            .await?
+        {
+            ActivationOutcome::Activated => {
+                tracing::info!("email verified, account activated");
+                Ok(())
+            }
+            ActivationOutcome::VerificationAlreadyUsed => {
+                Err(AppError::Verification(VerificationError::InvalidToken))
+            }
+            ActivationOutcome::AccountAlreadyActive => {
+                Err(AppError::Conflict(ConflictKind::AccountAlreadyVerified))
+            }
+        }
     }
 
     async fn regenerate_and_send_code(
         &self,
         verification_id: Uuid,
         user_email: &str,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), AppError> {
         let raw_token = Self::generate_token();
         let token_hash = Self::hash_token(&raw_token);
 

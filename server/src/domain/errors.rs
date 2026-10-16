@@ -25,27 +25,6 @@ pub enum UserDomainError {
     ProfileAlreadyExists,
 
     // -------------------------------------------------------------------------
-    // ClientProfile Errors
-    // -------------------------------------------------------------------------
-    #[error("Client profile is already initialized")]
-    AlreadyInitialized,
-
-    #[error("Client profile must be initialized before onboarding")]
-    ProfileNotInitialized,
-
-    #[error("Client onboarding has already been completed")]
-    AlreadyOnboarded,
-
-    #[error("Cannot follow your own profile")]
-    CannotFollowSelf,
-
-    #[error("Already following this barber")]
-    AlreadyFollowing,
-
-    #[error("Client profile is required to perform this action")]
-    ClientProfileRequired,
-
-    // -------------------------------------------------------------------------
     // BarberProfile Errors
     // -------------------------------------------------------------------------
     #[error("Target profile is not registered as a barber")]

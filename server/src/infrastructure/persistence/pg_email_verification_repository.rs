@@ -1,12 +1,29 @@
+// infrastructure/postgres/pg_email_verification_repository.rs
+//
+// STYLE RULES FOR THIS FILE (they apply to every method)
+// ------------------------------------------------------
+// 1. A repository only talks to the database. It returns data (`Option<T>`)
+//    or a technical `RepoError`. It never decides business errors.
+// 2. A repository NEVER logs errors. The error travels up and is logged ONCE,
+//    in `problem.rs` (`IntoResponse for AppError`). Logging at every layer
+//    gives you the same failure 3 times in the logs.
+// 3. Every `sqlx` call ends with `.map_err(db_err("<operation>"))?`.
+//    This keeps the original sqlx error AND records which operation failed.
+//    (The old `|_| ApiError::InternalServerError` threw the real cause away.)
+// 4. Tracing: `#[instrument(skip_all, fields(...))]` creates a span per call.
+//    We use `skip_all` + explicit fields so secrets (token hashes) and
+//    personal data can never be logged by accident.
+
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{
-    application::ports::email_verification_repository::{EmailVerification, EmailVerificationRepo},
-    error::ApiError,
-};
+use crate::{application::ports::{
+    email_verification_repository::{ActivationOutcome, EmailVerification, EmailVerificationRepo},
+    repo_error::RepoError,
+}, infrastructure::persistence::db_err};
+
 
 pub struct PostgresEmailVerificationRepo {
     pool: PgPool,
@@ -20,7 +37,15 @@ impl PostgresEmailVerificationRepo {
 
 #[async_trait]
 impl EmailVerificationRepo for PostgresEmailVerificationRepo {
-    async fn create(&self, verification: EmailVerification) -> Result<EmailVerification, ApiError> {
+    #[tracing::instrument(
+        level = "debug",
+        skip_all,
+        fields(verification_id = %verification.id, user_id = %verification.user_id)
+    )]
+    async fn create(
+        &self,
+        verification: EmailVerification,
+    ) -> Result<EmailVerification, RepoError> {
         let record = sqlx::query_as::<_, EmailVerificationRecord>(
             r#"
             INSERT INTO email_verifications (
@@ -38,15 +63,17 @@ impl EmailVerificationRepo for PostgresEmailVerificationRepo {
         .bind(verification.created_at)
         .fetch_one(&self.pool)
         .await
-        .map_err(|err| {
-            tracing::error!("Failed to insert email verification: {:?}", err);
-            ApiError::InternalServerError
-        })?;
+        // `?` = "if this is an Err, return it from the function immediately".
+        .map_err(db_err("email_verifications.create"))?;
 
         Ok(record.into())
     }
 
-    async fn find_by_token_hash(&self, token_hash: &str) -> Result<EmailVerification, ApiError> {
+    #[tracing::instrument(level = "debug", skip_all)] // no fields: the hash is a secret
+    async fn find_by_token_hash(
+        &self,
+        token_hash: &str,
+    ) -> Result<Option<EmailVerification>, RepoError> {
         let record = sqlx::query_as::<_, EmailVerificationRecord>(
             r#"
             SELECT id, user_id, token_hash, expires_at, verified_at, created_at
@@ -55,16 +82,21 @@ impl EmailVerificationRepo for PostgresEmailVerificationRepo {
             "#,
         )
         .bind(token_hash)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&self.pool) // -> Result<Option<Record>, sqlx::Error>
         .await
-        .map_err(|_| ApiError::InternalServerError)?;
+        .map_err(db_err("email_verifications.find_by_token_hash"))?;
 
-        record
-            .map(Into::into)
-            .ok_or(ApiError::InvalidVerificationToken)
+        // "Not found" is NOT an error at this layer: we return `None` and let
+        // the service decide. `Option::map` converts Record -> EmailVerification
+        // only when there is a value.
+        Ok(record.map(Into::into))
     }
 
-    async fn find_pending_by_user(&self, user_id: Uuid) -> Result<EmailVerification, ApiError> {
+    #[tracing::instrument(level = "debug", skip_all, fields(user_id = %user_id))]
+    async fn find_pending_by_user(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Option<EmailVerification>, RepoError> {
         let record = sqlx::query_as::<_, EmailVerificationRecord>(
             r#"
             SELECT id, user_id, token_hash, expires_at, verified_at, created_at
@@ -77,18 +109,17 @@ impl EmailVerificationRepo for PostgresEmailVerificationRepo {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|_| ApiError::InternalServerError)?;
+        .map_err(db_err("email_verifications.find_pending_by_user"))?;
 
-        record
-            .map(Into::into)
-            .ok_or(ApiError::VerificationTokenNotFound)
+        Ok(record.map(Into::into))
     }
 
+    #[tracing::instrument(level = "debug", skip_all, fields(user_id = %user_id))]
     async fn find_by_token_hash_and_user_id(
         &self,
         user_id: &Uuid,
         token_hash: &str,
-    ) -> Result<EmailVerification, ApiError> {
+    ) -> Result<Option<EmailVerification>, RepoError> {
         let record = sqlx::query_as::<_, EmailVerificationRecord>(
             r#"
             SELECT id, user_id, token_hash, expires_at, verified_at, created_at
@@ -101,18 +132,27 @@ impl EmailVerificationRepo for PostgresEmailVerificationRepo {
         .bind(token_hash)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|_| ApiError::InternalServerError)?
-        .ok_or(ApiError::InvalidVerificationToken)?;
+        .map_err(db_err("email_verifications.find_by_token_hash_and_user_id"))?;
 
-        Ok(record.into())
+        Ok(record.map(Into::into))
     }
 
-    async fn verify_and_activate_user(&self, id: Uuid, user_id: Uuid) -> Result<(), ApiError> {
+    #[tracing::instrument(
+        level = "debug",
+        skip_all,
+        fields(verification_id = %id, user_id = %user_id)
+    )]
+    async fn verify_and_activate_user(
+        &self,
+        id: Uuid,
+        user_id: Uuid,
+    ) -> Result<ActivationOutcome, RepoError> {
+        // Both updates must succeed together or not at all -> one transaction.
         let mut tx = self
             .pool
             .begin()
             .await
-            .map_err(|_| ApiError::InternalServerError)?;
+            .map_err(db_err("verify_and_activate_user.begin"))?;
 
         let verification_result = sqlx::query(
             r#"
@@ -125,10 +165,15 @@ impl EmailVerificationRepo for PostgresEmailVerificationRepo {
         .bind(Utc::now())
         .execute(&mut *tx)
         .await
-        .map_err(|_| ApiError::InternalServerError)?;
+        .map_err(db_err("verify_and_activate_user.mark_verified"))?;
 
+        // IMPORTANT for beginners: returning early here drops `tx` without calling
+        // `commit()`. sqlx then ROLLS BACK automatically. So every early `return`
+        // below leaves the database untouched.
+        //
+        // This is a business outcome, not a failure -> `Ok(<outcome>)`, not `Err`.
         if verification_result.rows_affected() != 1 {
-            return Err(ApiError::InvalidVerificationToken);
+            return Ok(ActivationOutcome::VerificationAlreadyUsed);
         }
 
         let user_result = sqlx::query(
@@ -141,24 +186,30 @@ impl EmailVerificationRepo for PostgresEmailVerificationRepo {
         .bind(user_id)
         .execute(&mut *tx)
         .await
-        .map_err(|_| ApiError::InternalServerError)?;
+        .map_err(db_err("verify_and_activate_user.activate_user"))?;
 
         if user_result.rows_affected() != 1 {
-            return Err(ApiError::AccountAlreadyVerified);
+            // Rolls back the first UPDATE too (same behaviour as before).
+            return Ok(ActivationOutcome::AccountAlreadyActive);
         }
 
         tx.commit()
             .await
-            .map_err(|_| ApiError::InternalServerError)?;
+            .map_err(db_err("verify_and_activate_user.commit"))?;
 
-        Ok(())
+        Ok(ActivationOutcome::Activated)
     }
 
+    #[tracing::instrument(
+        level = "debug",
+        skip_all,
+        fields(verification_id = %verification_id)
+    )]
     async fn replace_expired_verification(
         &self,
         verification_id: Uuid,
         token_hash: &str,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), RepoError> {
         sqlx::query(
             r#"
             UPDATE email_verifications
@@ -174,26 +225,25 @@ impl EmailVerificationRepo for PostgresEmailVerificationRepo {
         .bind(verification_id)
         .execute(&self.pool)
         .await
-        .map_err(|err| {
-            tracing::error!("Failed to replace expired verification: {:?}", err);
-            ApiError::InternalServerError
-        })?;
+        // The old inline `tracing::error!` is gone: the error is logged once, at the HTTP boundary.
+        .map_err(db_err("email_verifications.replace_expired"))?;
 
         Ok(())
     }
 
-    async fn delete_unverified_user(&self, user_id: Uuid) -> Result<(), ApiError> {
+    #[tracing::instrument(level = "debug", skip_all, fields(user_id = %user_id))]
+    async fn delete_unverified_user(&self, user_id: Uuid) -> Result<(), RepoError> {
         let mut tx = self
             .pool
             .begin()
             .await
-            .map_err(|_| ApiError::InternalServerError)?;
+            .map_err(db_err("delete_unverified_user.begin"))?;
 
         sqlx::query("DELETE FROM email_verifications WHERE user_id = $1")
             .bind(user_id)
             .execute(&mut *tx)
             .await
-            .map_err(|_| ApiError::InternalServerError)?;
+            .map_err(db_err("delete_unverified_user.delete_verifications"))?;
 
         sqlx::query(
             "DELETE FROM user_credentials WHERE user_id = $1 AND is_account_active = false",
@@ -201,17 +251,17 @@ impl EmailVerificationRepo for PostgresEmailVerificationRepo {
         .bind(user_id)
         .execute(&mut *tx)
         .await
-        .map_err(|_| ApiError::InternalServerError)?;
+        .map_err(db_err("delete_unverified_user.delete_credentials"))?;
 
         tx.commit()
             .await
-            .map_err(|_| ApiError::InternalServerError)?;
+            .map_err(db_err("delete_unverified_user.commit"))?;
 
         Ok(())
     }
 }
 
-// Private SQLx mapping DTO to derive FromRow internally inside infrastructure
+// Private SQLx mapping DTO: only this file knows the table shape.
 #[derive(sqlx::FromRow)]
 struct EmailVerificationRecord {
     id: Uuid,

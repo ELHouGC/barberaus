@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    domain::user::{account_aggregate::Gender},
-    error::ApiError,
+    application::error::{AppError, Violation}, domain::user::account_aggregate::Gender, 
 };
 
 #[derive(Debug, Deserialize)]
@@ -17,27 +16,38 @@ pub struct SignupRequest {
 }
 
 impl SignupRequest {
-    /// Validates basic constraints, including legal age.
-    pub fn validate(&self) -> Result<(), ApiError> {
+    /// Validates basic constraints, accumulating or returning structural violations.
+    pub fn validate(&self) -> Result<(), AppError> {
+        let mut errors = Vec::new();
+
         if self.full_name.trim().is_empty() {
-            return Err(ApiError::InvalidInput("Full name is required".into()));
+            errors.push(Violation {
+                pointer: "/full_name".to_string(),
+                key: "validation.required", // aligns with your i18n pattern
+            });
         }
 
         let now = Utc::now().date_naive();
         if self.date_of_birth >= now {
-            return Err(ApiError::InvalidInput(
-                "Date of birth must be in the past".into(),
-            ));
+            errors.push(Violation {
+                pointer: "/date_of_birth".to_string(),
+                key: "validation.date_of_birth_in_future",
+            });
+        } else {
+            // Calculate age only if date of birth is validly in the past
+            let age = now.years_since(self.date_of_birth).unwrap_or(0);
+            if age < 13 {
+                errors.push(Violation {
+                    pointer: "/date_of_birth".to_string(),
+                    key: "validation.underage",
+                });
+            }
         }
 
-        // Calculate age
-        let age = now.years_since(self.date_of_birth).unwrap_or(0);
-        if age < 13 {
-            // Set your enforcement boundary here (e.g., 13, 16, or 18)
-            return Err(ApiError::InvalidInput(
-                "User does not meet the minimum age requirement".into(),
-            ));
+        if !errors.is_empty() {
+            return Err(AppError::Validation(errors));
         }
+
         Ok(())
     }
 }
@@ -57,7 +67,6 @@ pub struct VerifyEmailRequest {
 #[derive(Deserialize)]
 pub struct ResendVerificationRequest {
     pub user_id: Uuid,
-    pub email: String,
 }
 
 #[derive(Deserialize)]

@@ -1,6 +1,5 @@
 use crate::{
-    application::services::email_verification::{EmailMessage, EmailSender},
-    error::ApiError,
+    application::{error::AppError, services::email_verification::{EmailMessage, EmailSender}},
 };
 use async_trait::async_trait;
 use resend_rs::{Resend, types::CreateEmailBaseOptions};
@@ -10,7 +9,7 @@ pub struct ConsoleEmailSender;
 
 #[async_trait]
 impl EmailSender for ConsoleEmailSender {
-    async fn send(&self, message: EmailMessage) -> Result<(), ApiError> {
+    async fn send(&self, message: EmailMessage) -> Result<(), AppError> {
         println!(
             "\n================= EMAIL =================\n\
             From: {}\nTo: {}\nSubject: {}\n------------------------------------------\n\
@@ -39,7 +38,7 @@ impl ResendEmailSender {
 
 #[async_trait]
 impl EmailSender for ResendEmailSender {
-    async fn send(&self, message: EmailMessage) -> Result<(), ApiError> {
+    async fn send(&self, message: EmailMessage) -> Result<(), AppError> {
         let to = message.to.iter().map(String::as_str).collect::<Vec<_>>();
         let mut options = CreateEmailBaseOptions::new(&message.from, to, &message.subject);
 
@@ -54,7 +53,7 @@ impl EmailSender for ResendEmailSender {
             .emails
             .send(options)
             .await
-            .map_err(|_| ApiError::InternalServerError)?; // Map to your ApiError
+            .map_err(|e| AppError::Internal(Box::new(AppError::Internal(e.into()))))?; // Map to your AppError
 
         Ok(())
     }

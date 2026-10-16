@@ -1,7 +1,6 @@
 mod config;
 mod cqrs;
 mod domain;
-mod error;
 mod infrastructure;
 mod state;
 mod transport;
