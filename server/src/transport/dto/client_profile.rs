@@ -1,14 +1,9 @@
 use serde::{Deserialize, Serialize};
-use url::Url;
 use uuid::Uuid;
-use crate::error::ApiError;
-
-const MAX_AVATAR_URL_LEN: usize = 2048;
-const ALLOWED_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp", "avif"];
+use crate::{application::error::{AppError, Violation}, transport::dto::avatar_url::{AvatarPolicy, AvatarUrl, AvatarUrlError}};
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateAvatarRequest {
-    pub user_id: Uuid,
     pub avatar_url: String,
 }
 
@@ -16,103 +11,42 @@ pub struct UpdateAvatarRequest {
 #[derive(Debug, Clone)]
 pub struct AvatarUpload {
     pub user_id: Uuid,
-    pub avatar_url: String,
+    pub avatar_url: AvatarUrl,
 }
-
 impl UpdateAvatarRequest {
-    /// Transport-level validation: syntax, HTTPS enforcement, Cloudinary domain, 
-    /// cloud name match, delivery path structure, and allowed image extensions.
-    pub fn validate(self, expected_cloud_name: &str) -> Result<AvatarUpload, ApiError> {
-        let raw = self.avatar_url.trim();
-        let mut errors = Vec::new();
+    pub fn validate(self, expected_cloud_name: &str, user: Uuid) -> Result<AvatarUpload, AppError> {
+        let policy = AvatarPolicy {
+            cloud_name: expected_cloud_name,
+            owner: user,
+        };
 
-        if raw.is_empty() {
-            errors.push(("avatar_url", "validation.required"));
-        } else if raw.len() > MAX_AVATAR_URL_LEN {
-            errors.push(("avatar_url", "validation.too_long"));
-        } else {
-            match Url::parse(raw) {
-                Ok(u) => {
-                    // 1. Enforce HTTPS scheme
-                    if u.scheme() != "https" {
-                        errors.push(("avatar_url", "validation.url_must_be_https"));
-                    }
+        let avatar_url = AvatarUrl::parse(&self.avatar_url, &policy).map_err(|err| {
+            let key = match err {
+                AvatarUrlError::Empty => "validation.required",
+                AvatarUrlError::TooLong => "validation.too_long",
+                AvatarUrlError::Malformed => "validation.url_invalid",
+                AvatarUrlError::NotHttps => "validation.url_must_be_https",
+                AvatarUrlError::WrongHost => "validation.invalid_image_domain",
+                AvatarUrlError::WrongCloud => "validation.invalid_cloud_name",
+                AvatarUrlError::WrongAssetType => "validation.invalid_asset_type",
+                AvatarUrlError::WrongDeliveryType => "validation.invalid_delivery_type",
+                AvatarUrlError::WrongStructure => "validation.invalid_cloudinary_structure",
+                AvatarUrlError::NotOwner => "validation.invalid_owner",
+                AvatarUrlError::BadExtension => "validation.invalid_file_extension",
+            };
 
-                    // 2. Validate that the host belongs to Cloudinary CDN (and block backend API subdomains)
-                    match u.host_str() {
-                        Some(host) if host.ends_with("cloudinary.com") => {
-                            if host.starts_with("api.") {
-                                errors.push(("avatar_url", "validation.invalid_image_domain"));
-                            }
-                        }
-                        Some(_) => {
-                            errors.push(("avatar_url", "validation.invalid_image_domain"));
-                        }
-                        None => {
-                            errors.push(("avatar_url", "validation.url_invalid"));
-                        }
-                    }
+            AppError::Validation(vec![Violation {
+                pointer: "/avatar_url".to_string(),
+                key,
+            }])
+        })?;
 
-                    // 3. Extract and validate path segments
-                    let segments: Vec<&str> = u
-                        .path_segments()
-                        .map(|s| s.collect())
-                        .unwrap_or_default();
-
-                    if segments.len() < 4 {
-                        errors.push(("avatar_url", "validation.invalid_cloudinary_structure"));
-                    } else {
-                        let cloud_name = segments[0];
-                        let asset_type = segments[1];
-                        let delivery_type = segments[2];
-
-                        // Enforce that the asset belongs to YOUR specific Cloudinary cloud
-                        if cloud_name != expected_cloud_name {
-                            errors.push(("avatar_url", "validation.invalid_cloud_name"));
-                        }
-                        if asset_type != "image" {
-                            errors.push(("avatar_url", "validation.invalid_asset_type"));
-                        }
-                        if delivery_type != "upload" {
-                            errors.push(("avatar_url", "validation.invalid_delivery_type"));
-                        }
-                    }
-
-                    // 4. Validate File Extension
-                    let path = u.path();
-                    let extension = path
-                        .split('.')
-                        .last()
-                        .unwrap_or("")
-                        .to_lowercase();
-
-                    if !ALLOWED_EXTENSIONS.contains(&extension.as_str()) {
-                        errors.push(("avatar_url", "validation.invalid_file_extension"));
-                    }
-                }
-                Err(_) => {
-                    errors.push(("avatar_url", "validation.url_invalid"));
-                }
-            }
-        }
-
-        if errors.is_empty() {
-            Ok(AvatarUpload {
-                user_id: self.user_id,
-                avatar_url: self.avatar_url.trim().to_string(),
-            })
-        } else {
-            Err(ApiError::InvalidInput(format!(
-                "Validation errors: {:?}",
-                errors
-                    .into_iter()
-                    .map(|(field, msg)| format!("{}: {}", field, msg))
-                    .collect::<Vec<_>>()
-            )))
-        }
+        Ok(AvatarUpload {
+            user_id: user,
+            avatar_url,
+        })
     }
 }
-
 
 #[derive(Serialize)]
 pub struct SignatureResponse {

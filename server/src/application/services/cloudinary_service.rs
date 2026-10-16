@@ -1,26 +1,26 @@
-use sha2::{Digest, Sha256};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
+use sha2::{Sha256, Digest};
+use crate::application::error::AppError;
+use crate::transport::dto::client_profile::SignatureResponse; // or wherever SignatureResponse lives
 
-use crate::transport::dto::client_profile::SignatureResponse;
-
-#[derive(Clone)]
 pub struct CloudinaryService {
     pub cloud_name: String,
-    api_key: String,
-    api_secret: String,
+    pub api_key: String,
+    pub api_secret: String,
 }
 
-
-
 impl CloudinaryService {
-    pub fn new() -> Result<Self, String> {
+    pub fn new() -> Result<Self, AppError> {
+  
         let cloud_name = env::var("CLOUDINARY_CLOUD_NAME")
-            .map_err(|_| "Missing CLOUDINARY_CLOUD_NAME env var".to_string())?;
+            .map_err(|e| AppError::internal(format!("Missing CLOUDINARY_CLOUD_NAME env var: {e}")))?;
+            
         let api_key = env::var("CLOUDINARY_API_KEY")
-            .map_err(|_| "Missing CLOUDINARY_API_KEY env var".to_string())?;
+            .map_err(|e| AppError::internal(format!("Missing CLOUDINARY_API_KEY env var: {e}")))?;
+            
         let api_secret = env::var("CLOUDINARY_API_SECRET")
-            .map_err(|_| "Missing CLOUDINARY_API_SECRET env var".to_string())?;
+            .map_err(|e| AppError::internal(format!("Missing CLOUDINARY_API_SECRET env var: {e}")))?;
 
         Ok(Self::from_credentials(cloud_name, api_key, api_secret))
     }
@@ -33,10 +33,10 @@ impl CloudinaryService {
         }
     }
 
-    pub fn generate_upload_signature(&self, folder: &str) -> Result<SignatureResponse, String> {
+    pub fn generate_upload_signature(&self, folder: &str) -> Result<SignatureResponse, AppError> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| e.to_string())?
+            .map_err(|e| AppError::internal(e))?
             .as_secs();
 
         // 1. Sort parameters alphabetically: folder, then timestamp
