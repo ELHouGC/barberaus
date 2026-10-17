@@ -80,6 +80,15 @@ impl Aggregate for ClientProfileAggregate {
                 if avatar_url.is_empty() {
                     return Err(ClientDomainError::InvalidAvatarUrl);
                 }
+                
+                sink.write(
+                    ClientProfileEvent::AvatarUpdated {
+                        avatar_url,    
+                    },
+                    self,
+                )
+                .await;
+
             }
             ClientProfileCommand::CompleteOnboarding {
                 city,
