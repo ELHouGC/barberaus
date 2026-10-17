@@ -20,10 +20,11 @@ pub async fn handle_update_avatar_command(
     Ok(Json(ApiResponse::success(())))
 }
 
+
 pub async fn handle_get_upload_signature(
     State(app_state): State<AppState>,
     auth: AuthContext, // or your auth extractor
-) -> Result<Json<SignatureResponse>, AppError> {
+) -> Result<Json<ApiResponse<SignatureResponse>>, AppError> {
     let signature = app_state.client_profile_app.generate_avatar_signature(auth.claims.sub).await?;
-    Ok(Json(signature))
+    Ok(Json(ApiResponse::success(signature)))
 }
