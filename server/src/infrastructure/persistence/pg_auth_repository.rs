@@ -14,7 +14,7 @@ impl PgUserAuthRepository {
     }
 }
         
-#[async_trait::async_trait]
+#[async_trait]
 impl UserAuthRepository for PgUserAuthRepository {
     async fn create_user(&self, record: UserCredentialsRecord) -> Result<(), AppError> {
         let result = sqlx::query(
