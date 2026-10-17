@@ -8,8 +8,8 @@ use crate::{
 
 pub fn create_router(app_state: AppState) -> Router {
     Router::new()
-        .route("/api/client/avatar/signature", get(handle_get_upload_signature))
-        .route("/api/client/avatar", post(handle_update_avatar_command))
+        .route("/api/v1/client/avatar/signature", get(handle_get_upload_signature))
+        .route("/api/v1/client/avatar", post(handle_update_avatar_command))
         .route_layer(middleware::from_fn_with_state(
             app_state.clone(),
             require_auth,
