@@ -1,88 +1,28 @@
-import type { 
-  AuthResponse, 
-  LoginRequest, 
-  MessageResponse, 
-  ResendVerificationRequest, 
-  SignupRequest, 
-  SignupResponse, 
-  VerifyEmailRequest 
-} from "./auth.contracts";
-import { api } from "./client.api";
-import { useAuthStore } from "@/stores/auth"; // Adjust import path to match your store
-import type { ApiResponse } from "./envelopes";
+// src/transport/auth.api.ts
+import type {
+  AuthResponse,
+  LoginRequest,
+  MessageResponse,
+  ResendVerificationRequest,
+  SignupRequest,
+  SignupResponse,
+  VerifyEmailRequest,
+} from './auth.contracts';
+import { api } from './client.api';
 
+// Pure HTTP: no store access. `api.*` never throws and returns ApiResponse<T>.
+// Session state is owned by the auth store.
 export const transportApi = {
-  async signup(data: SignupRequest): Promise<ApiResponse<SignupResponse>> {
-    try {
-      return await api.post<ApiResponse<SignupResponse>>('/auth/signup', data);
-    } catch (err) {
-      return handleApiError(err);
-    }
-  },
+  signup: (data: SignupRequest) => api.post<SignupResponse>('/auth/signup', data),
 
-  async resendVerification(data: ResendVerificationRequest): Promise<ApiResponse<MessageResponse>> {
-    try {
-      return await api.post<ApiResponse<MessageResponse>>('/auth/resend-verification', data);
-    } catch (err) {
-      return handleApiError(err);
-    }
-  },
+  resendVerification: (data: ResendVerificationRequest) =>
+    api.post<MessageResponse>('/auth/resend-verification', data),
 
-  async verify(data: VerifyEmailRequest): Promise<ApiResponse<AuthResponse>> {
-    try {
-      const response = await api.post<ApiResponse<AuthResponse>>('/auth/verify-email', data);
-      if (response.success && response.data) {
-        const authStore = useAuthStore();
-        authStore.setSession(response.data);
-      }
-      return response;
-    } catch (err) {
-      return handleApiError(err);
-    }
-  },
+  verify: (data: VerifyEmailRequest) => api.post<AuthResponse>('/auth/verify-email', data),
 
-  async login(credentials: LoginRequest): Promise<ApiResponse<AuthResponse>> {
-    try {
-      const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', credentials);
+  login: (credentials: LoginRequest) => api.post<AuthResponse>('/auth/login', credentials),
 
-      return response;
-    } catch (err) {
-      return handleApiError(err);
-    }
-  },
+  refresh: () => api.post<AuthResponse>('/auth/session/refresh'),
 
-  async refresh(): Promise<ApiResponse<AuthResponse>> {
-    try {
-      const response = await api.post<ApiResponse<AuthResponse>>('/auth/session/refresh');
-      if (response.success && response.data) {
-        const authStore = useAuthStore();
-        authStore.setSession(response.data);
-      }
-      return response;
-    } catch (err) {
-      return handleApiError(err);
-    }
-  },
-
-  async logout(): Promise<ApiResponse<MessageResponse>> {
-    const authStore = useAuthStore();
-    try {
-      const response = await api.post<ApiResponse<MessageResponse>>('/auth/session/logout');
-      authStore.clearSession();
-      return response;
-    } catch (err) {
-      authStore.clearSession();
-      return handleApiError(err);
-    }
-  },
+  logout: () => api.post<MessageResponse>('/auth/session/logout'),
 };
-
-function handleApiError<T>(err: unknown): ApiResponse<T> {
-  return {
-    success: false,
-    error: {
-      code: 'NETWORK_ERROR',
-      message: err instanceof Error ? err.message : 'Unable to connect to backend server.',
-    },
-  };
-}
