@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b303c58e-607b-4087-b218-87baab04d1ea",
     "name": "BarberOS API",
-    "description": "Postman collection for BarberOS API test automation with dynamic Postman Vault token injection.",
+    "description": "Postman collection for BarberOS API test automation. Authentication failures use RFC 9457 problem details; protected client avatar requests use the authenticated user's Cloudinary upload signature.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -74,7 +74,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"email\": \"{{email}}\"\n}"
+              "raw": "{\n  \"user_id\": \"{{userId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/resend-verification",
@@ -253,7 +253,7 @@
                   "",
                   "const body = pm.response.json();",
                   "pm.test('Onboarding success response', function () {",
-                  "    pm.expect(body.code).to.eql('SUCCESS');",
+                  "    pm.expect(body.success).to.eql(true);",
                   "    pm.expect(body.data.message).to.be.a('string');",
                   "});"
                 ]
@@ -276,6 +276,160 @@
               "raw": "{{baseUrl}}/client/onboarding",
               "host": ["{{baseUrl}}"],
               "path": ["client", "onboarding"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Client avatar",
+      "item": [
+        {
+          "name": "Get avatar upload signature",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Signature is scoped to the authenticated user avatar folder', function () {",
+                  "    pm.expect(body.signature).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.timestamp).to.be.a('number');",
+                  "    pm.expect(body.api_key).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.cloud_name).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.folder).to.eql('avatars/' + pm.environment.get('userId'));",
+                  "});",
+                  "",
+                  "pm.environment.set('avatarSignature', body.signature);",
+                  "pm.environment.set('avatarTimestamp', body.timestamp);",
+                  "pm.environment.set('cloudinaryApiKey', body.api_key);",
+                  "pm.environment.set('cloudName', body.cloud_name);",
+                  "pm.environment.set('avatarFolder', body.folder);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{hostUrl}}/api/v1/client/avatar/signature",
+              "host": ["{{hostUrl}}"],
+              "path": ["api", "v1", "client", "avatar", "signature"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload avatar to Cloudinary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Cloudinary returned a secure image URL', function () {",
+                  "    pm.expect(body.secure_url).to.be.a('string').and.match(/^https:\\/\\//);",
+                  "});",
+                  "pm.environment.set('avatarUrl', body.secure_url);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "api_key",
+                  "value": "{{cloudinaryApiKey}}",
+                  "type": "text"
+                },
+                {
+                  "key": "timestamp",
+                  "value": "{{avatarTimestamp}}",
+                  "type": "text"
+                },
+                {
+                  "key": "folder",
+                  "value": "{{avatarFolder}}",
+                  "type": "text"
+                },
+                {
+                  "key": "signature",
+                  "value": "{{avatarSignature}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "https://api.cloudinary.com/v1_1/{{cloudName}}/image/upload",
+              "protocol": "https",
+              "host": ["api", "cloudinary", "com"],
+              "path": ["v1_1", "{{cloudName}}", "image", "upload"]
+            },
+            "description": "Choose an image file in the file field, then send this request after getting a fresh avatar signature."
+          },
+          "response": []
+        },
+        {
+          "name": "Update avatar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Avatar update uses the standard success envelope', function () {",
+                  "    pm.expect(pm.response.json().success).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"avatar_url\": \"{{avatarUrl}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{hostUrl}}/api/v1/client/avatar",
+              "host": ["{{hostUrl}}"],
+              "path": ["api", "v1", "client", "avatar"]
             }
           },
           "response": []
@@ -328,8 +482,10 @@
           "    ];",
           "",
           "    const isPublic = publicEndpoints.some(path => urlStr.includes(path));",
+          "    const apiHosts = [pm.environment.get('hostUrl'), pm.environment.get('baseUrl')].filter(Boolean);",
+          "    const isBarberOsApi = apiHosts.some(host => urlStr.startsWith(host));",
           "",
-          "    if (!isPublic) {",
+          "    if (isBarberOsApi && !isPublic) {",
           "        let accessToken = await pm.vault.get('accessToken');",
           "        if (!accessToken) accessToken = pm.environment.get('accessToken');",
           "        if (accessToken) {",
@@ -342,6 +498,38 @@
           "}",
           "",
           "await injectAccessToken();"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.response.code >= 400) {",
+          "    pm.test('Errors use RFC 9457 problem details', function () {",
+          "        pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
+          "        const problem = pm.response.json();",
+          "        pm.expect(problem.type).to.be.a('string');",
+          "        pm.expect(problem.title).to.be.a('string');",
+          "        pm.expect(problem.status).to.eql(pm.response.code);",
+          "        pm.expect(problem.code).to.be.a('string');",
+          "        pm.expect(problem.i18n_key).to.be.a('string');",
+          "        if (problem.errors !== undefined) {",
+          "            pm.expect(problem.errors).to.be.an('array');",
+          "            problem.errors.forEach(function (error) {",
+          "                pm.expect(error.pointer).to.be.a('string');",
+          "                pm.expect(error.key).to.be.a('string');",
+          "            });",
+          "        }",
+          "    });",
+          "",
+          "    if (pm.response.code === 401) {",
+          "        pm.test('Unauthorized responses advertise Bearer authentication', function () {",
+          "            pm.expect(pm.response.headers.get('WWW-Authenticate')).to.eql('Bearer');",
+          "        });",
+          "    }",
+          "}"
         ]
       }
     }
