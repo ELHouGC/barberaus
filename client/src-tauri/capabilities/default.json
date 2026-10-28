@@ -5,15 +5,23 @@
   "windows": [
     "main"
   ],
-
   "permissions": [
     "core:default",
     "http:default",
     {
       "identifier": "http:allow-fetch",
       "allow": [
-        { "url": "http://192.168.100.94:8080/*" }
+        {
+          "url": "http://192.168.100.94:8080/*"
+        },
+        {
+          "url": "http://localhost:8080/*"
+        }
       ]
-    }
+    },
+    "dialog:allow-open",
+    "fs:default",
+    "camera-kessdev:default",
+    "location-settings:default"
   ]
 }

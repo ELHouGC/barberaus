@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' https://tauri.localhost; img-src 'self' data: blob: https://tauri.localhost; media-src 'self' data: blob: https://tauri.localhost; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost https://tauri.localhost"
     }
   },
   "bundle": {
