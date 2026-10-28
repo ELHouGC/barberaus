@@ -1,10 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-
-import LoginScreen from '@/views/auth/LoginScreen.vue'
-import SignupScreen from '@/views/auth/SignupScreen.vue'
-import VerifyScreen from '@/views/auth/VerifyScreen.vue'
-import ClientFeed from '@/views/client/ClientFeed.vue'
+import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -12,26 +7,57 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: LoginScreen,
+      component: () => import('@/views/auth/LoginScreen.vue'),
       meta: { requiresGuest: true }
     },
     {
       path: '/signup',
       name: 'signup',
-      component: SignupScreen,
+      component: () => import('@/views/auth/SignupScreen.vue'),
       meta: { requiresGuest: true }
     },
     {
       path: '/verify',
       name: 'verify',
-      component: VerifyScreen,
+      component: () => import('@/views/auth/VerifyScreen.vue'),
       meta: { requiresGuest: true }
     },
     {
       path: '/clientfeed',
       name: 'clientfeed',
-      component: ClientFeed,
+      component: () => import('@/views/client/ClientFeed.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('@/views/client/onboarding/OnboardingFlowView.vue'),
+      redirect: { name: 'onboarding-avatar' },
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: 'avatar',
+          name: 'onboarding-avatar',
+          component: () => import('@/views/client/onboarding/OnboardingAvatarView.vue'),
+          children: [
+            {
+              path: 'camera',
+              name: 'onboarding-avatar-camera',
+              component: () => import('@/views/client/onboarding/OnboardingAvatarCameraView.vue'),
+            },
+          ],
+        },
+        {
+          path: 'style-dna',
+          name: 'onboarding-style-dna',
+          component: () => import('@/views/client/onboarding/OnboardingStyleDnaView.vue'),
+        },
+        {
+          path: 'location',
+          name: 'onboarding-location',
+          component: () => import('@/views/client/onboarding/OnboardingDiscoverView.vue'),
+        },
+      ],
     },
     {
       path: '/',
