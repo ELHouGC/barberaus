@@ -21,7 +21,9 @@ export interface AuthResponse {
   user: UserPayload;
 }
 
-export type SignupGender = 'Male' | 'Female' | 'PreferNotToSay';
+// Single source for the type, the yup schema and the <select> options.
+export const SIGNUP_GENDERS = ['Male', 'Female', 'PreferNotToSay'] as const;
+export type SignupGender = (typeof SIGNUP_GENDERS)[number];
 
 export interface SignupRequest {
   full_name: string;

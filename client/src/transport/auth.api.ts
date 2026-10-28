@@ -8,7 +8,7 @@ import type {
   SignupResponse,
   VerifyEmailRequest,
 } from './auth.contracts';
-import { api } from './client.api';
+import { api } from './http';
 
 // Pure HTTP: no store access. `api.*` never throws and returns ApiResponse<T>.
 // Session state is owned by the auth store.

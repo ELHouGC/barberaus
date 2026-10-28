@@ -76,7 +76,7 @@ async function readProblem(response: Response): Promise<ProblemDetails> {
   return clientProblem(
     response.status,
     'UNEXPECTED_RESPONSE',
-    'errors.unexpected',
+    'errors.client.unexpected',
     response.statusText || 'Unexpected response',
   );
 }
@@ -92,7 +92,7 @@ async function readSuccess<T>(response: Response): Promise<ApiResponse<T>> {
   }
   // 2xx without the success envelope: backend contract violation, fail loudly.
   return failure(
-    clientProblem(response.status, 'INVALID_RESPONSE', 'errors.invalid_response', 'Invalid response'),
+    clientProblem(response.status, 'INVALID_RESPONSE', 'errors.client.invalid_response', 'Invalid response'),
   );
 }
 
@@ -135,7 +135,7 @@ async function send<T>(
       clientProblem(
         0,
         'NETWORK_ERROR',
-        'errors.network',
+        'errors.client.network',
         'Network error',
         err instanceof Error ? err.message : undefined,
       ),
