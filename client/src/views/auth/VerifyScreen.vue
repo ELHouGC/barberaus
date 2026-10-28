@@ -1,28 +1,34 @@
 <script setup lang="ts">
 import { ref, reactive, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useApiError } from '@/composables/useApiError'
 import AuthLayout from '@/components/layout/AuthLayout.vue'
-import AuthButton from '@/components/ui/AuthButton.vue'
+import AuthButton from '@/components/auth/AuthButton.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { isLoading } = storeToRefs(authStore)
+const { t } = useI18n()
+const { translate } = useApiError()
 
-const email = (route.query.email as string) || 'your email'
-const userId = (route.query.userId as string) || (route.query.user_id as string) || ''
+// Login and Signup both navigate here with ?userId=...&email=...
+const email = (route.query.email as string | undefined) ?? ''
+const userId = (route.query.userId as string | undefined) ?? ''
 
 // 6 separate box states for code input
 const digits = reactive(['', '', '', '', '', ''])
 const inputRefs = ref<HTMLInputElement[]>([])
 
-const loading = ref(false)
-const errorMessage = ref<string | null>(null)
+const errorKey = ref<string | null>(null)
 
 const handleInput = (index: number, event: Event) => {
   const input = event.target as HTMLInputElement
   const value = input.value.replace(/[^0-9]/g, '')
-  
+
   if (value) {
     digits[index] = value[value.length - 1]
     if (index < 5) {
@@ -51,11 +57,11 @@ const handlePaste = (event: ClipboardEvent) => {
   event.preventDefault()
   const pasteData = event.clipboardData?.getData('text').trim() || ''
   const numbers = pasteData.replace(/[^0-9]/g, '').split('')
-  
+
   numbers.forEach((num, idx) => {
     if (idx < 6) digits[idx] = num
   })
-  
+
   const focusIndex = Math.min(numbers.length, 5)
   inputRefs.value[focusIndex]?.focus()
 }
@@ -63,53 +69,48 @@ const handlePaste = (event: ClipboardEvent) => {
 const handleVerify = async () => {
   const code = digits.join('')
   if (code.length < 6) {
-    errorMessage.value = 'Please enter all 6 digits.'
+    errorKey.value = 'auth.verify.incomplete'
     return
   }
 
   if (!userId) {
-    errorMessage.value = 'Missing user identification. Please sign up again.'
+    errorKey.value = 'auth.verify.missingUser'
     return
   }
 
-  errorMessage.value = null
-  loading.value = true
+  errorKey.value = null
 
-  try {
-    // Calling store method handles saving access token and session metadata
-    await authStore.verifyEmail({
-      user_id: userId,
-      code: code
-    })
-    
-    // Direct navigate to application post-verification
-    router.push('/clientfeed')
-  } catch (err: any) {
-    errorMessage.value = err.message || 'Invalid verification code. Please try again.'
-  } finally {
-    loading.value = false
+  // The store opens the session (token + user) on success.
+  const result = await authStore.verifyEmail({ user_id: userId, code })
+
+  if (result.success) {
+    router.push('/onboarding')
+  } else {
+    errorKey.value = result.error.i18n_key
   }
 }
 </script>
 
 <template>
-  <AuthLayout 
-    title="Verify Your Email" 
-    :subtitle="`Enter the 6-digit code sent to ${email}.`"
+  <AuthLayout
+    :title="t('auth.verify.title')"
+    :subtitle="t('auth.verify.subtitle', { email: email || t('auth.verify.yourEmail') })"
   >
     <form @submit.prevent="handleVerify" class="mt-6 space-y-6">
-      <div 
-        v-if="errorMessage" 
+      <div
+        v-if="errorKey"
         class="rounded-lg border border-error-border bg-error-bg px-3 py-3 text-[13px] text-error-text"
       >
-        {{ errorMessage }}
+        {{ translate(errorKey) }}
       </div>
 
       <!-- 6-Digit Code Inputs -->
       <div>
-        <label class="block text-xs font-medium text-tx-secondary mb-3">Verification Code</label>
+        <label class="block text-xs font-medium text-tx-secondary mb-3">
+          {{ t('auth.verify.codeLabel') }}
+        </label>
         <div class="flex justify-between gap-1.5 sm:gap-2" @paste="handlePaste">
-          <input 
+          <input
             v-for="(_, index) in digits"
             :key="index"
             :ref="el => { if (el) inputRefs[index] = el as HTMLInputElement }"
@@ -123,18 +124,23 @@ const handleVerify = async () => {
         </div>
       </div>
 
-      <AuthButton :isLoading="loading">
-        {{ loading ? 'Verifying...' : 'Confirm Code' }}
+      <AuthButton :isLoading="isLoading">
+        {{ isLoading ? t('auth.verify.submitting') : t('auth.verify.submit') }}
       </AuthButton>
     </form>
 
     <template #footer>
-      <div class="mt-4 text-tx-secondary text-sm">
-        Back to 
-        <button @click="router.push('/login')" class="font-semibold text-brand hover:underline">
-          Sign In
-        </button>
-      </div>
+      <i18n-t keypath="auth.verify.backToSignIn" tag="div" class="mt-4 text-tx-secondary text-sm">
+        <template #link>
+          <button
+            type="button"
+            @click="router.push('/login')"
+            class="font-semibold text-brand hover:underline"
+          >
+            {{ t('auth.verify.signInLink') }}
+          </button>
+        </template>
+      </i18n-t>
     </template>
   </AuthLayout>
 </template>

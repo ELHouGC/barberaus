@@ -1,91 +1,88 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useApiError } from '@/composables/useApiError'
+
 import AuthLayout from '@/components/layout/AuthLayout.vue'
-import AuthInput from '@/components/ui/AuthInput.vue'
-import AuthButton from '@/components/ui/AuthButton.vue'
+import AuthInput from '@/components/auth/AuthInput.vue'
+import AuthButton from '@/components/auth/AuthButton.vue'
+
 
 const router = useRouter()
 const authStore = useAuthStore()
-
+const { isLoading } = storeToRefs(authStore) // replaces the local `loading` ref
+const { t } = useI18n()
+const { translate } = useApiError()
+ 
 // Form State
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
-
-// Submission & Alert State
-const loading = ref(false)
-const alertType = ref<'none' | 'unverified' | 'invalid' | 'network_error'>('none')
-
+ 
+// i18n key of the alert: a server key (errors.server.*), a client key
+// (errors.client.*) or a frontend one (auth.login.*). Translated at render.
+const alertKey = ref<string | null>(null)
+ 
+const UNVERIFIED_REDIRECT_DELAY_MS = 2000
+let redirectTimer: ReturnType<typeof setTimeout> | undefined
+onBeforeUnmount(() => clearTimeout(redirectTimer))
+ 
 const handleLogin = async () => {
-  loading.value = true;
-  alertType.value = 'none';
-
+  alertKey.value = null
+  const submittedEmail = email.value // the field may change during the redirect delay
+ 
   const result = await authStore.login({
-    email: email.value,
+    email: submittedEmail,
     password: password.value,
-  });
-
-  loading.value = false;
-
+  })
+ 
   if (result.success) {
-    router.push('/clientfeed');
-  } else if (result.errorType === 'unverified') {
-    alertType.value = 'unverified';
-    
-    // Auto-redirect to /verify with payload after showing notification
-    setTimeout(() => {
-      router.push({
-        path: '/verify',
-        query: {
-          userId: result.userId ,
-          email: result.email || email.value,
-        },
-      });
-    }, 2000);
-  } else if (result.errorType === 'invalid') {
-    alertType.value = 'invalid';
-  } else {
-    alertType.value = 'network_error';
+    router.push('/clientfeed')
+    return
   }
-};
+ 
+  const { error } = result
+ 
+  // The only code that needs more than a message (problem.rs sends user_id
+  // for this code alone): send the user to email verification.
+  if (error.code === 'ACCOUNT_NOT_VERIFIED' && error.user_id) {
+    const userId = error.user_id
+    alertKey.value = 'auth.login.unverifiedRedirect'
+    redirectTimer = setTimeout(() => {
+      router.push({ path: '/verify', query: { userId, email: submittedEmail } })
+    }, UNVERIFIED_REDIRECT_DELAY_MS)
+    return
+  }
+ 
+  // Everything else (invalid_credentials, invalid_input, internal_error,
+  // network...) is just its own i18n_key.
+  alertKey.value = error.i18n_key
+}
 </script>
 
 <template>
-  <AuthLayout 
-    title="Welcome Back" 
-    subtitle="Sign in to access your shop dashboard and appointments."
-  >
+
+  <AuthLayout :title="t('auth.login.title')" :subtitle="t('auth.login.subtitle')">
     <form @submit.prevent="handleLogin" class="mt-6 space-y-4">
       
       <!-- Alert States -->
       <div 
-        v-if="alertType === 'unverified'" 
+        v-if="alertKey" 
         class="rounded-lg border border-error-border bg-error-bg px-3 py-3 text-[13px] text-error-text"
       >
-        Your email address is not verified yet. Redirecting to verification page...
-      </div>
 
-      <div 
-        v-else-if="alertType === 'invalid'" 
-        class="rounded-lg border border-error-border bg-error-bg px-3 py-3 text-[13px] text-error-text"
-      >
-        Invalid email or password. Please try again.
-      </div>
-
-      <div 
-        v-else-if="alertType === 'network_error'" 
-        class="rounded-lg border border-error-border bg-error-bg px-3 py-3 text-[13px] text-error-text"
-      >
-        Unable to connect to the server. Please check your connection.
+      
+        {{ translate(alertKey) }}
       </div>
 
       <!-- Inputs -->
       <AuthInput 
         id="email"
         type="email"
-        label="Email Address" 
+        :label="t('auth.fields.email.label')" 
         v-model="email" 
         placeholder="name@example.com" 
       />
@@ -93,7 +90,7 @@ const handleLogin = async () => {
       <AuthInput 
         id="password"
         :type="showPassword ? 'text' : 'password'"
-        label="Password" 
+        :label="t('auth.fields.password.label')" 
         v-model="password" 
         placeholder="••••••••"
       >
@@ -119,22 +116,25 @@ const handleLogin = async () => {
       </AuthInput>
 
       <!-- Submit -->
-      <AuthButton :isLoading="loading">
-        {{ loading ? 'Signing in...' : 'Sign In' }}
+      <AuthButton :isLoading="isLoading">
+        {{ isLoading ? t('auth.login.submitting') : t('auth.login.submit') }}
       </AuthButton>
     </form>
 
     <!-- Footer & Links -->
     <template #footer>
-      <div class="mb-4 text-tx-secondary">
-        Don't have an account? 
-        <button 
-          @click="router.push('/signup')" 
-          class="font-semibold text-brand hover:underline"
-        >
-          Sign up
-        </button>
-      </div>
+        <div class="mb-4 text-tx-secondary">
+          {{ t('auth.login.noAccount') }}
+          <button
+            @click="router.push('/signup')"
+            class="font-semibold text-brand hover:underline"
+          >
+            {{ t('auth.login.signUpLink') }}
+          </button>
+        </div>
     </template>
+
   </AuthLayout>
 </template>
+
+
