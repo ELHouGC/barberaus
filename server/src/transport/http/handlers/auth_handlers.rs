@@ -157,8 +157,7 @@ pub async fn refresh_token(
     let session =
         session_management::rotate_session(&state.redis_pool, refresh_token.as_str(), &state.config.jwt_secret)
             .await?;
-
-    tracing::debug!("session rotated");
+    tracing::info!("session rotated");
 
     session_reply(session)
 }

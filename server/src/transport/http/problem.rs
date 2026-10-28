@@ -92,7 +92,7 @@ impl IntoResponse for AppError {
         let body = Problem {
             type_: format!("urn:barberapp:problem:{}", slug.replace('_', "-")),
             title, status: status.as_u16(), code,
-            i18n_key: format!("errors.{slug}"), user_id, errors,
+            i18n_key: format!("errors.server.{slug}"), user_id, errors,
         };
 
         let mut res = (status, [(header::CONTENT_TYPE, "application/problem+json")], Json(body)).into_response();

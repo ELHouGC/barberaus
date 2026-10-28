@@ -13,7 +13,7 @@ pub struct Claims {
 
 pub fn mint_token(user_id: Uuid, profile: &str, secret: &str) -> Result<String, AppError> {
     let expiration = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::hours(24))
+        .checked_add_signed(chrono::Duration::minutes(15))
         .expect("valid timestamp")
         .timestamp() as usize;
     let jti = Uuid::new_v4().to_string();
