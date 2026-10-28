@@ -1,0 +1,28 @@
+{
+  "fullName": {
+    "required": "Full name is required",
+    "min": "Full name must be at least 2 characters"
+  },
+  "email": {
+    "required": "Email address is required",
+    "invalid": "Please enter a valid email address"
+  },
+  "dateOfBirth": {
+    "required": "Date of birth is required",
+    "past": "Date of birth must be in the past",
+    "minAge": "You must be at least 13 years old to register"
+  },
+  "gender": {
+    "required": "Gender is required",
+    "invalid": "Invalid gender selection"
+  },
+  "password": {
+    "required": "Password is required",
+    "min": "Password must be at least 8 characters"
+  },
+  "avatar": {
+    "file_too_large": "The image file is too large. Maximum allowed size is 5MB.",
+    "invalid_format": "Please upload a valid image file (JPEG, PNG, or WebP).",
+    "image_too_small": "The image resolution is too low. Minimum size is 200x200 pixels."
+  }
+}

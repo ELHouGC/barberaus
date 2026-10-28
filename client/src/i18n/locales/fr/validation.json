@@ -1,0 +1,28 @@
+{
+  "fullName": {
+    "required": "Le nom complet est obligatoire",
+    "min": "Le nom complet doit contenir au moins 2 caractères"
+  },
+  "email": {
+    "required": "L'adresse e-mail est obligatoire",
+    "invalid": "Veuillez saisir une adresse e-mail valide"
+  },
+  "dateOfBirth": {
+    "required": "La date de naissance est obligatoire",
+    "past": "La date de naissance doit être dans le passé",
+    "minAge": "Vous devez avoir au moins 13 ans pour vous inscrire"
+  },
+  "gender": {
+    "required": "Le genre est obligatoire",
+    "invalid": "Sélection du genre invalide"
+  },
+  "password": {
+    "required": "Le mot de passe est obligatoire",
+    "min": "Le mot de passe doit contenir au moins 8 caractères"
+  },
+  "avatar": {
+    "file_too_large": "Le fichier image est trop volumineux. La taille maximale autorisée est de 5 Mo.",
+    "invalid_format": "Veuillez téléverser un fichier image valide (JPEG, PNG ou WebP).",
+    "image_too_small": "La résolution de l’image est trop faible. La taille minimale est de 200 × 200 pixels."
+  }
+}

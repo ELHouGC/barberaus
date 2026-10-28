@@ -1,0 +1,37 @@
+{
+  "client": {
+    "network": "Impossible de se connecter au serveur. Vérifiez votre connexion.",
+    "unexpected": "Une erreur est survenue. Veuillez réessayer.",
+    "invalidResponse": "Le serveur a renvoyé une réponse inattendue. Veuillez réessayer."
+  },
+  "server": {
+    "missing_token": "Vous devez vous connecter pour continuer.",
+    "invalid_token": "Votre session est invalide. Veuillez vous reconnecter.",
+    "token_expired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "invalid_credentials": "Adresse e-mail ou mot de passe incorrect.",
+    "account_not_verified": "Votre adresse e-mail n'est pas encore vérifiée.",
+    "forbidden": "Vous n'avez pas l'autorisation d'effectuer cette action.",
+    "tenant_context_required": "Veuillez sélectionner un salon pour continuer.",
+    "membership_not_found": "Vous n'êtes pas membre actif de ce salon.",
+    "invalid_verification_token": "Le code de vérification est incorrect.",
+    "verification_token_expired": "Ce code de vérification a expiré. Veuillez en demander un nouveau.",
+    "invalid_input": "Certaines informations saisies sont invalides.",
+    "user_not_found": "Nous n'avons pas trouvé ce compte.",
+    "email_exists": "Un compte existe déjà avec cette adresse e-mail.",
+    "account_already_verified": "Ce compte est déjà vérifié. Vous pouvez vous connecter.",
+    "concurrent_modification": "Cet élément a été modifié ailleurs. Rechargez la page et réessayez.",
+    "service_unavailable": "Le service est temporairement indisponible. Veuillez réessayer dans un instant.",
+    "internal_error": "Une erreur est survenue de notre côté. Veuillez réessayer.",
+    "client_profile_already_initialized": "Votre profil est déjà configuré.",
+    "client_profile_not_initialized": "Votre profil n'est pas encore configuré.",
+    "onboarding_already_completed": "La configuration initiale est déjà terminée.",
+    "cannot_follow_self": "Vous ne pouvez pas vous suivre vous-même.",
+    "already_following": "Vous suivez déjà ce compte.",
+    "invalid_avatar_url": "L'URL de l'avatar est invalide."
+  },
+  "cloudinary": {
+    "file_too_large": "Le fichier image est trop volumineux. Veuillez choisir une image plus petite.",
+    "invalid_image": "Le fichier sélectionné n'est pas une image valide.",
+    "upload_failed": "Échec du téléchargement de l'image vers le stockage. Veuillez réessayer."
+  }
+}

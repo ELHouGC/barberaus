@@ -1,0 +1,37 @@
+{
+  "client": {
+    "network": "Unable to connect to the server. Please check your connection.",
+    "unexpected": "Something went wrong. Please try again.",
+    "invalidResponse": "The server sent an unexpected response. Please try again."
+  },
+  "server": {
+    "missing_token": "You need to sign in to continue.",
+    "invalid_token": "Your session is invalid. Please sign in again.",
+    "token_expired": "Your session has expired. Please sign in again.",
+    "invalid_credentials": "Invalid email or password.",
+    "account_not_verified": "Your email address is not verified yet.",
+    "forbidden": "You don't have permission to do this.",
+    "tenant_context_required": "Please select a shop to continue.",
+    "membership_not_found": "You are not an active member of this shop.",
+    "invalid_verification_token": "The verification code is incorrect.",
+    "verification_token_expired": "This verification code has expired. Please request a new one.",
+    "invalid_input": "Some of the information you entered is invalid.",
+    "user_not_found": "We couldn't find this account.",
+    "email_exists": "An account with this email already exists.",
+    "account_already_verified": "This account is already verified. You can sign in.",
+    "concurrent_modification": "This was changed elsewhere. Please reload and try again.",
+    "service_unavailable": "The service is temporarily unavailable. Please try again shortly.",
+    "internal_error": "Something went wrong on our side. Please try again.",
+    "client_profile_already_initialized": "Your profile is already set up.",
+    "client_profile_not_initialized": "Your profile isn't set up yet.",
+    "onboarding_already_completed": "Onboarding is already completed.",
+    "cannot_follow_self": "You can't follow yourself.",
+    "already_following": "You're already following this account.",
+    "invalid_avatar_url": "The avatar image URL is invalid."
+  },
+  "cloudinary": {
+    "file_too_large": "The image file is too large. Please choose a smaller image.",
+    "invalid_image": "The selected file is not a valid image.",
+    "upload_failed": "Failed to upload image to storage. Please try again."
+  }
+}
