@@ -3,7 +3,8 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
-    application::{error::AppError, services::cloudinary_service::CloudinaryService}, cqrs::ClientProfileCqrsFramework, domain::user::client_profile_aggregate::ClientProfileCommand, transport::dto::client_profile::{AvatarUpload, SignatureResponse}};
+    application::{error::AppError, services::cloudinary_service::CloudinaryService}, cqrs::ClientProfileCqrsFramework, domain::user::{client_profile_aggregate::ClientProfileCommand, value_objects::AvatarUpload}, transport::dto::client_profile::SignatureResponse};
+      
 
 pub struct ClientProfileApp {
     cqrs: Arc<ClientProfileCqrsFramework>, // your CqrsFramework alias
@@ -22,9 +23,11 @@ pub async fn generate_avatar_signature(&self, user_id: Uuid) -> Result<Signature
 
 pub async fn update_avatar(&self, input: AvatarUpload) -> Result<(), AppError> {
     let aggregate_id = input.user_id.to_string();
+
     let command = ClientProfileCommand::UpdateAvatar {
         user_id: aggregate_id.clone(),
-        avatar_url: input.avatar_url.into_string(),
+        avatar_url: input.avatar_url,
+        crop_coordinates: input.crop_coordinates, 
     };
 
     self.cqrs

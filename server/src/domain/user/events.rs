@@ -3,7 +3,7 @@ use cqrs_es::DomainEvent;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::user::account_aggregate::Gender;
+use crate::domain::user::{account_aggregate::Gender, value_objects::CropCoordinates};
 // -----------------------------------------------------------------------------
 // User Events
 // -----------------------------------------------------------------------------
@@ -64,7 +64,7 @@ pub enum ClientProfileEvent {
         client_id: Uuid,
         created_at: DateTime<Utc>,
     },
-    AvatarUpdated { avatar_url: String },
+    AvatarUpdated { avatar_url: String , crop_coordinates: CropCoordinates }, // (x, y, width, height)
     ClientOnboarded {
         client_id: Uuid,
         city: String,

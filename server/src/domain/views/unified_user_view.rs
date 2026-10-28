@@ -7,6 +7,7 @@ use crate::domain::user::account_aggregate::{Gender, UserAccountAggregate};
 use crate::domain::user::client_profile_aggregate::ClientProfileAggregate;
 use crate::domain::user::events::ClientProfileEvent;
 use crate::domain::user::events::UserAccountEvent;
+use crate::domain::user::value_objects::CropCoordinates;
 
 // -----------------------------------------------------------------------------
 // Unified View Data Structure
@@ -34,14 +35,19 @@ pub struct IdentityViewSection {
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ClientProfileViewSection {
     pub is_initialized: bool,
-    pub avatar_url: Option<String>,
+    pub avatar: Option<ClientProfileAvatar>,
     pub onboarding_completed: bool,
     pub city: Option<String>,
     pub search_radius_km: i32,
     pub selected_styles: Vec<String>,
     pub followed_barber_ids: Vec<Uuid>,
 }
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 
+pub struct ClientProfileAvatar{
+    pub avatar_url: Option<String>,
+    pub crop_cordinate: CropCoordinates,
+}
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BarberProfileViewSection {
     pub is_initialized: bool,
@@ -111,7 +117,7 @@ impl View<ClientProfileAggregate> for UnifiedUserView {
             ClientProfileEvent::ClientProfileInitialized { created_at, .. } => {
                 self.client_profile = Some(ClientProfileViewSection {
                     is_initialized: true,
-                    avatar_url: None,
+                    avatar: None,
                     onboarding_completed: false,
                     city: None,
                     search_radius_km: 10, // Default search radius
@@ -120,9 +126,12 @@ impl View<ClientProfileAggregate> for UnifiedUserView {
                 });
                 self.updated_at = Some(*created_at);
             }
-            ClientProfileEvent::AvatarUpdated { avatar_url } => {
+            ClientProfileEvent::AvatarUpdated { avatar_url, crop_coordinates } => {
                 if let Some(profile) = &mut self.client_profile {
-                    profile.avatar_url = Some(avatar_url.clone());
+                    profile.avatar = Some(ClientProfileAvatar {
+                        avatar_url: Some(avatar_url.clone()),
+                        crop_cordinate: crop_coordinates.clone(),
+                    });
                 }
             }
 

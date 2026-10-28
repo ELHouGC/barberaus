@@ -1,18 +1,14 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::{application::error::{AppError, Violation}, transport::dto::avatar_url::{AvatarPolicy, AvatarUrl, AvatarUrlError}};
+use crate::{application::error::{AppError, Violation}, domain::user::value_objects::{AvatarUpload, CropCoordinates}, transport::dto::avatar_url::{AvatarPolicy, AvatarUrl, AvatarUrlError}};
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateAvatarRequest {
     pub avatar_url: String,
+    pub crop_coordinates: CropCoordinates,
 }
 
-/// Clean application-layer structure containing only what the business logic needs.
-#[derive(Debug, Clone)]
-pub struct AvatarUpload {
-    pub user_id: Uuid,
-    pub avatar_url: AvatarUrl,
-}
+
 impl UpdateAvatarRequest {
     pub fn validate(self, expected_cloud_name: &str, user: Uuid) -> Result<AvatarUpload, AppError> {
         let policy = AvatarPolicy {
@@ -39,11 +35,22 @@ impl UpdateAvatarRequest {
                 pointer: "/avatar_url".to_string(),
                 key,
             }])
+
         })?;
+
+     
+        
+        if self.crop_coordinates.width <= 0 || self.crop_coordinates.height <= 0 {
+            return Err(AppError::Validation(vec![Violation {
+                pointer: "/crop_coordinates".to_string(),
+                key: "validation.invalid_crop_dimensions",
+            }]));
+        }
 
         Ok(AvatarUpload {
             user_id: user,
-            avatar_url,
+            avatar_url: avatar_url.into_string(),
+            crop_coordinates: self.crop_coordinates,
         })
     }
 }

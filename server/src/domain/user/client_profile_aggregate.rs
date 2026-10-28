@@ -1,4 +1,4 @@
-use crate::domain::user::events::ClientProfileEvent;
+use crate::domain::user::{events::ClientProfileEvent, value_objects::CropCoordinates};
 use chrono::Utc;
 use cqrs_es::{Aggregate, DomainEvent, event_sink::EventSink};
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,7 @@ pub struct ClientProfileAggregate {
     pub followed_barber_ids: Vec<Uuid>,
 }
 
+
 // -----------------------------------------------------------------------------
 // Commands
 // -----------------------------------------------------------------------------
@@ -29,7 +30,11 @@ pub enum ClientProfileCommand {
     InitializeProfile {
         client_id: Uuid,
     },
-    UpdateAvatar { user_id: String, avatar_url: String },
+    UpdateAvatar { 
+        user_id: String,
+        avatar_url: String,
+        crop_coordinates: CropCoordinates, 
+    },
     CompleteOnboarding {
         city: String,
         search_radius_km: i32,
@@ -73,7 +78,7 @@ impl Aggregate for ClientProfileAggregate {
                 )
                 .await;
             }
-            ClientProfileCommand::UpdateAvatar { avatar_url, .. } => {
+            ClientProfileCommand::UpdateAvatar { avatar_url, crop_coordinates , .. } => {
                 if self.is_initialized == false {
                     return Err(ClientDomainError::ProfileNotInitialized);
                 }
@@ -81,9 +86,11 @@ impl Aggregate for ClientProfileAggregate {
                     return Err(ClientDomainError::InvalidAvatarUrl);
                 }
                 
+
                 sink.write(
                     ClientProfileEvent::AvatarUpdated {
                         avatar_url,    
+                        crop_coordinates,
                     },
                     self,
                 )
@@ -154,8 +161,9 @@ impl Aggregate for ClientProfileAggregate {
                 self.client_id = Some(client_id);
                 self.is_initialized = true;
             }
-            ClientProfileEvent::AvatarUpdated { avatar_url } => {
+            ClientProfileEvent::AvatarUpdated { avatar_url , crop_coordinates } => {
                 self.avatar_url = Some(avatar_url);
+                // Optionally, you can store crop_coordinates in the aggregate if needed
             }
             ClientProfileEvent::ClientOnboarded {
                 city,
