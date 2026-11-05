@@ -63,7 +63,7 @@
         <img
           :src="photo.src"
           :alt="photo.alt"
-          :class="[photo.height, 'w-full object-cover transition duration-300']"
+          class="block h-auto w-full object-cover transition duration-300"
           loading="lazy"
         />
 
