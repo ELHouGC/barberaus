@@ -24,7 +24,10 @@ use crate::{
             AuthResponse, LoginRequest, MessageResponse, ResendVerificationRequest, Session,
             SignupRequest, SignupResponse, VerifyEmailRequest,
         },
-        middlewares::{auth_context::AuthContext, auth_cookies, refresh_token::RefreshToken},
+        http::{
+            auth_cookies, extractors::auth_context::AuthContext
+        },
+        middlewares::{ refresh_token::RefreshToken},
         response::ApiResponse,
     },
 };

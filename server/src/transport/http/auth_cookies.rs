@@ -1,4 +1,4 @@
-// transport/http/auth_cookies.rs
+// transport/middlewares/auth_cookies.rs
 //
 // THIS COMMIT IS A PURE REFACTOR: only the error type changes (ApiError -> AppError).
 // Cookie attributes are untouched on purpose. One logical change per commit.
