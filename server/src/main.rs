@@ -8,7 +8,7 @@ use resend_rs::Method;
 use transport::http;
 mod application;
 
-use axum::{Router, http::header, routing::get};
+use axum::{Router, http::{HeaderValue, header}, routing::get};
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
@@ -43,7 +43,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cors = CorsLayer::new()
         // 1. Explicitly list frontend origins (Do NOT use Any / '*')
-        .allow_origin(AllowOrigin::mirror_request())
+        .allow_origin(AllowOrigin::list([
+            HeaderValue::from_static("http://localhost:5173"),
+            HeaderValue::from_static("http://tauri.localhost"),
+            HeaderValue::from_static("tauri://localhost"),
+        ]))
         // 2. Allow necessary HTTP methods
         .allow_methods([
             Method::GET,
@@ -69,6 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .merge(http::router::client_profile::create_router(
             app_state.clone(),
         ))
+        .merge(http::router::style_photos::create_router())
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));

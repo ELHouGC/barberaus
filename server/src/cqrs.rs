@@ -19,6 +19,8 @@ pub type ClientProfileCqrsFramework =
     CqrsFramework<ClientProfileAggregate, ClientProfileEventStore>;
 
 // View repository type for read-side queries
+pub type ClientProfileViewRepository =
+    PostgresViewRepository<UnifiedUserView, ClientProfileAggregate>;
 pub type UserViewRepository = PostgresViewRepository<UnifiedUserView, UserAccountAggregate>;
 
 pub fn create_cqrs_framework(
@@ -26,13 +28,11 @@ pub fn create_cqrs_framework(
 ) -> (
     UserCqrsFramework,
     Arc<ClientProfileCqrsFramework>,
+    Arc<ClientProfileViewRepository>,
     Arc<UserViewRepository>,
 ) {
     // 1. Client Profile View Query Setup
-    let client_view_repo = Arc::new(PostgresViewRepository::<
-        UnifiedUserView,
-        ClientProfileAggregate,
-    >::new("user_views", pool.clone()));
+    let client_view_repo = Arc::new(ClientProfileViewRepository::new("user_views", pool.clone()));
     let client_view_query = GenericQuery::new(Arc::clone(&client_view_repo));
 
     let client_repo = PostgresEventRepository::new(pool.clone());
@@ -60,5 +60,5 @@ pub fn create_cqrs_framework(
         (),
     );
 
-    (user_cqrs, client_cqrs, user_view_repo)
+    (user_cqrs, client_cqrs, client_view_repo, user_view_repo)
 }

@@ -145,7 +145,7 @@ impl EmailVerificationService {
         let message = EmailMessage {
             from: self.email_registration_from.clone(),
             to: vec![email.to_string()],
-            subject: "BarberOS Email Verification".to_string(),
+            subject: "Barberaus Email Verification".to_string(),
             text_body: Some(format!("Your verification code is: {}", raw_token)),
             html_body: None,
         };

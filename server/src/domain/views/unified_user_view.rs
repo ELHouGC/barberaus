@@ -135,22 +135,17 @@ impl View<ClientProfileAggregate> for UnifiedUserView {
                 }
             }
 
-            ClientProfileEvent::ClientOnboarded {
-                city,
-                search_radius_km,
+            ClientProfileEvent::StylePreferencesUpdated {
                 selected_styles,
-                followed_barber_ids,
-                onboarded_at,
-                ..
+                updated_at,
             } => {
                 if let Some(profile) = &mut self.client_profile {
-                    profile.city = Some(city.clone());
-                    profile.search_radius_km = *search_radius_km;
-                    profile.selected_styles = selected_styles.clone();
-                    profile.followed_barber_ids = followed_barber_ids.clone();
-                    profile.onboarding_completed = true;
+                    for style in selected_styles {
+                        profile.selected_styles.push(style.clone());       
+                    }
+
                 }
-                self.updated_at = Some(*onboarded_at);
+                self.updated_at = Some(*updated_at);
             }
 
             ClientProfileEvent::BarberFollowed {
@@ -166,5 +161,52 @@ impl View<ClientProfileAggregate> for UnifiedUserView {
                 self.updated_at = Some(*followed_at);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use chrono::Utc;
+    use cqrs_es::{EventEnvelope, View};
+    use uuid::Uuid;
+
+    use super::{ClientProfileViewSection, UnifiedUserView};
+    use crate::domain::user::{
+        client_profile_aggregate::ClientProfileAggregate,
+        events::ClientProfileEvent,
+    };
+
+    #[test]
+    fn style_preference_projection_appends_event_styles_without_duplicates() {
+        let mut view = UnifiedUserView {
+            client_profile: Some(ClientProfileViewSection {
+                selected_styles: vec!["fade".to_string()],
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let event = EventEnvelope::<ClientProfileAggregate> {
+            aggregate_id: Uuid::new_v4().to_string(),
+            sequence: 1,
+            payload: ClientProfileEvent::StylePreferencesUpdated {
+                selected_styles: vec![
+                    "curly".to_string(),
+                    "curly".to_string(),
+                    "fade".to_string(),
+                    "volume".to_string(),
+                ],
+                updated_at: Utc::now(),
+            },
+            metadata: HashMap::new(),
+        };
+
+        view.update(&event);
+
+        assert_eq!(
+            view.client_profile.unwrap().selected_styles,
+            ["fade", "curly", "volume"]
+        );
     }
 }
