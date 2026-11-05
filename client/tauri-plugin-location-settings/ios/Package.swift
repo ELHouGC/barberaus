@@ -6,7 +6,6 @@ import PackageDescription
 let package = Package(
     name: "tauri-plugin-location-settings",
     platforms: [
-        .macOS(.v10_13),
         .iOS(.v15),
     ],
     products: [

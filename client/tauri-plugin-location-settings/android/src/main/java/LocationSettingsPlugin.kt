@@ -9,8 +9,9 @@ import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.Plugin
 
+
 @TauriPlugin
-class ExamplePlugin(
+class LocationSettingsPlugin(
     private val activity: Activity,
 ) : Plugin(activity) {
 

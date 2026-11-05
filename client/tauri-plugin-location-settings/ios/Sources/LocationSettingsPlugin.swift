@@ -2,7 +2,7 @@
 import Tauri
 import UIKit
 
-class ExamplePlugin: Plugin {
+class LocationSettingsPlugin: Plugin {
     @objc public func openLocationSettings(_ invoke: Invoke) throws {
         guard let url = URL(string: UIApplication.openSettingsURLString) else {
             invoke.reject("Unable to open Barberaus app settings.")
@@ -23,5 +23,5 @@ class ExamplePlugin: Plugin {
 
 @_cdecl("init_plugin_location_settings")
 func initPlugin() -> Plugin {
-    ExamplePlugin()
+    LocationSettingsPlugin()
 }
