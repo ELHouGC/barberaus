@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' https://tauri.localhost; img-src 'self' data: blob: https://tauri.localhost; media-src 'self' data: blob: https://tauri.localhost; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost https://tauri.localhost"
+      "csp": "default-src 'self' https://tauri.localhost; img-src 'self' data: blob: https://tauri.localhost https://images.unsplash.com https://res.cloudinary.com; media-src 'self' data: blob: https://tauri.localhost; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost https://tauri.localhost https://api.cloudinary.com"
     }
   },
   "bundle": {
