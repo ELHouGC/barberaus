@@ -80,7 +80,7 @@ mod tests {
             .create_pool(Some(Runtime::Tokio1))
             .unwrap();
 
-        let (user_cqrs, client_cqrs, client_view_repo, user_view_repo) =
+        let (user_cqrs, client_cqrs, client_view_repo, _user_view_repo) =
             create_cqrs_framework(db_pool.clone());
         let email_sender: Arc<dyn EmailSender> = Arc::new(ConsoleEmailSender);
         let email_verification = Arc::new(EmailVerificationService::new(
@@ -107,7 +107,6 @@ mod tests {
         AppState {
             auth_app,
             client_profile_app,
-            user_view_repo,
             redis_pool,
             config: Config {
                 jwt_secret: "test-secret".to_string(),

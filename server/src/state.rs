@@ -10,7 +10,7 @@ use crate::{
             cloudinary_service::CloudinaryService,
             email_verification::{EmailSender, EmailVerificationService},
         },
-    }, config::{AppEnvironment, Config}, cqrs::{UserViewRepository, create_cqrs_framework}, infrastructure::{
+    }, config::{AppEnvironment, Config}, cqrs::{ create_cqrs_framework}, infrastructure::{
         argon2_password_hasher::Argon2PasswordHasher,
         email_sender::{ConsoleEmailSender, ResendEmailSender},
         persistence::{
@@ -24,7 +24,6 @@ use crate::{
 pub struct AppState {
     pub auth_app: AuthApp,
     pub client_profile_app: Arc<ClientProfileApp>,
-    pub user_view_repo: Arc<UserViewRepository>, // Exposed for query/read endpoints
     pub redis_pool: RedisPool,
     pub config: Config,
 }
@@ -52,7 +51,7 @@ impl AppState {
             std::env::var("FROM_EMAIL").expect("FROM_EMAIL must be set")),
         );
 
-        let (user_cqrs, client_profile_cqrs_framework, client_profile_view_repo, user_view_repo) =
+        let (user_cqrs, client_profile_cqrs_framework, client_profile_view_repo, _user_view_repo) =
             create_cqrs_framework(db_pool);
         let user_cqrs = Arc::new(user_cqrs);
         let password_hasher = Arc::new(Argon2PasswordHasher);
@@ -70,7 +69,6 @@ impl AppState {
         Self {
             auth_app,
             client_profile_app,
-            user_view_repo,
             redis_pool,
             config,
         }
