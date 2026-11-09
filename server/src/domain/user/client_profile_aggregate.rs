@@ -155,7 +155,7 @@ impl Aggregate for ClientProfileAggregate {
                 self.client_id = Some(client_id);
                 self.is_initialized = true;
             }
-            ClientProfileEvent::AvatarUpdated { avatar_url , crop_coordinates } => {
+            ClientProfileEvent::AvatarUpdated { avatar_url , .. } => {
                 self.avatar_url = Some(avatar_url);
                 // Optionally, you can store crop_coordinates in the aggregate if needed
             }
