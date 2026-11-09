@@ -24,7 +24,6 @@ pub struct ClientProfileApp {
     pub cloudinary: Arc<CloudinaryService>,
 }
 
-
 impl ClientProfileApp {
     pub fn new(
         cqrs: Arc<ClientProfileCqrsFramework>,
@@ -67,7 +66,7 @@ impl ClientProfileApp {
     ) -> Result<StylePreferencesResponse, AppError> {
         let selected_styles = StylePhotoCatalogService::resolve_style_ids(&selected_photo_ids)?;
         let aggregate_id = user_id.to_string();
-        
+
         self.cqrs
             .execute(
                 &aggregate_id,
@@ -90,11 +89,7 @@ impl ClientProfileApp {
         })
     }
 
-    pub async fn follow_barber(
-        &self,
-        user_id: Uuid,
-        barber_id: Uuid,
-    ) -> Result<(), AppError> {
+    pub async fn follow_barber(&self, user_id: Uuid, barber_id: Uuid) -> Result<(), AppError> {
         // 1. Load the target barber's unified user view.
         let barber_aggregate_id = barber_id.to_string();
 
@@ -118,13 +113,10 @@ impl ClientProfileApp {
         // 3. Execute the follow command against the client's aggregate.
         let aggregate_id = user_id.to_string();
 
-        let command = ClientProfileCommand::FollowBarber {
-            barber_id,
-        };
+        let command = ClientProfileCommand::FollowBarber { barber_id };
 
         self.cqrs.execute(&aggregate_id, command).await?;
 
         Ok(())
     }
-
 }

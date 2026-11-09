@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    application::error::{AppError, Violation}, domain::user::account_aggregate::Gender, 
+    application::error::{AppError, Violation},
+    domain::user::account_aggregate::Gender,
 };
 
 #[derive(Debug, Deserialize)]

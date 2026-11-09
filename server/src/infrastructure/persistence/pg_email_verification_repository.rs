@@ -19,11 +19,15 @@ use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{application::ports::{
-    email_verification_repository::{ActivationOutcome, EmailVerification, EmailVerificationRepo},
-    repo_error::RepoError,
-}, infrastructure::persistence::db_err};
-
+use crate::{
+    application::ports::{
+        email_verification_repository::{
+            ActivationOutcome, EmailVerification, EmailVerificationRepo,
+        },
+        repo_error::RepoError,
+    },
+    infrastructure::persistence::db_err,
+};
 
 pub struct PostgresEmailVerificationRepo {
     pool: PgPool,

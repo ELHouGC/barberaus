@@ -159,7 +159,10 @@ mod tests {
         Uuid::from_u128(2)
     }
     fn policy() -> AvatarPolicy<'static> {
-        AvatarPolicy { cloud_name: CLOUD, owner: owner() }
+        AvatarPolicy {
+            cloud_name: CLOUD,
+            owner: owner(),
+        }
     }
     fn good(file: &str) -> String {
         format!(
@@ -205,21 +208,42 @@ mod tests {
             ("not a url".into(), Malformed),
             (good("abc.jpg").replace("https", "http"), NotHttps),
             // host tricks
-            (good("abc.jpg").replace("res.cloudinary.com", "evilcloudinary.com"), WrongHost),
-            (good("abc.jpg").replace("res.cloudinary.com", "api.cloudinary.com"), WrongHost),
-            (good("abc.jpg").replace("res.cloudinary.com", "res.cloudinary.com@evil.com"), WrongHost),
-            (good("abc.jpg").replace("res.cloudinary.com", "user:pw@res.cloudinary.com"), Malformed),
+            (
+                good("abc.jpg").replace("res.cloudinary.com", "evilcloudinary.com"),
+                WrongHost,
+            ),
+            (
+                good("abc.jpg").replace("res.cloudinary.com", "api.cloudinary.com"),
+                WrongHost,
+            ),
+            (
+                good("abc.jpg").replace("res.cloudinary.com", "res.cloudinary.com@evil.com"),
+                WrongHost,
+            ),
+            (
+                good("abc.jpg").replace("res.cloudinary.com", "user:pw@res.cloudinary.com"),
+                Malformed,
+            ),
             (format!("{}?x=1", good("abc.jpg")), Malformed),
             // path structure
             (good("abc.jpg").replace(CLOUD, "someone-else"), WrongCloud),
-            (good("abc.jpg").replace("/image/", "/video/"), WrongAssetType),
-            (good("abc.jpg").replace("/upload/", "/fetch/"), WrongDeliveryType),
+            (
+                good("abc.jpg").replace("/image/", "/video/"),
+                WrongAssetType,
+            ),
+            (
+                good("abc.jpg").replace("/upload/", "/fetch/"),
+                WrongDeliveryType,
+            ),
             (
                 format!("https://res.cloudinary.com/{CLOUD}/image/upload/avatars/{me}"),
                 WrongStructure,
             ),
             // ownership
-            (good("abc.jpg").replace(&me.to_string(), &other().to_string()), NotOwner),
+            (
+                good("abc.jpg").replace(&me.to_string(), &other().to_string()),
+                NotOwner,
+            ),
             (good("abc.jpg").replace("avatars", "portfolio"), NotOwner),
             // extension
             (good("abc.exe"), BadExtension),

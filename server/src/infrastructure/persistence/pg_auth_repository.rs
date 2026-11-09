@@ -2,7 +2,10 @@ use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
-use crate::application::{ error::{AppError, ConflictKind, Resource}, ports::auth_repository::{UserAuthRepository, UserCredentialsRecord }};
+use crate::application::{
+    error::{AppError, ConflictKind, Resource},
+    ports::auth_repository::{UserAuthRepository, UserCredentialsRecord},
+};
 
 pub struct PgUserAuthRepository {
     pool: PgPool,
@@ -13,7 +16,7 @@ impl PgUserAuthRepository {
         Self { pool }
     }
 }
-        
+
 #[async_trait]
 impl UserAuthRepository for PgUserAuthRepository {
     async fn create_user(&self, record: UserCredentialsRecord) -> Result<(), AppError> {
@@ -40,9 +43,9 @@ impl UserAuthRepository for PgUserAuthRepository {
 
         result.map_err(|e| {
             tracing::error!(error = ?e, "Database error while creating user credentials");
-            AppError::Unavailable { 
-                dependency: "database", 
-                source: Box::new(e) 
+            AppError::Unavailable {
+                dependency: "database",
+                source: Box::new(e),
             }
         })?;
 
@@ -62,9 +65,9 @@ impl UserAuthRepository for PgUserAuthRepository {
         .await
         .map_err(|e| {
             tracing::error!(error = ?e, "Database error while finding user by email");
-            AppError::Unavailable { 
+            AppError::Unavailable {
                 dependency: "database", 
-                source: Box::new(e) 
+                source: Box::new(e)
             }
         })
     }
@@ -75,9 +78,9 @@ impl UserAuthRepository for PgUserAuthRepository {
             .await
             .map_err(|e| {
                 tracing::error!(error = ?e, user_id = %user_id, "Database error while deleting user");
-                AppError::Unavailable { 
+                AppError::Unavailable {
                     dependency: "database", 
-                    source: Box::new(e) 
+                    source: Box::new(e)
                 }
             })?;
 
@@ -107,9 +110,9 @@ impl UserAuthRepository for PgUserAuthRepository {
         .await
         .map_err(|e| {
             tracing::error!(error = ?e, user_id = %user_id, tenant_id = %tenant_id, "Database error while resolving tenant role");
-            AppError::Unavailable { 
+            AppError::Unavailable {
                 dependency: "database", 
-                source: Box::new(e) 
+                source: Box::new(e)
             }
         })?;
 
@@ -135,9 +138,9 @@ impl UserAuthRepository for PgUserAuthRepository {
         .await
         .map_err(|e| {
             tracing::error!(error = ?e, user_id = %id, "Database error while finding user by id");
-            AppError::Unavailable { 
+            AppError::Unavailable {
                 dependency: "database", 
-                source: Box::new(e) 
+                source: Box::new(e)
             }
         })
     }

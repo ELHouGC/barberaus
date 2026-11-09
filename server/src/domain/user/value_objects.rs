@@ -1,16 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-
-
-
-
-
-
-
-
 /// Clean application-layer structure containing only what the business logic needs.
-#[derive(Debug, Serialize , Deserialize, Clone, PartialEq, Eq, Hash , Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Default)]
 pub struct CropCoordinates {
     pub x: u32,
     pub y: u32,

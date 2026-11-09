@@ -10,7 +10,10 @@ use crate::{
             cloudinary_service::CloudinaryService,
             email_verification::{EmailSender, EmailVerificationService},
         },
-    }, config::{AppEnvironment, Config}, cqrs::{ create_cqrs_framework}, infrastructure::{
+    },
+    config::{AppEnvironment, Config},
+    cqrs::create_cqrs_framework,
+    infrastructure::{
         argon2_password_hasher::Argon2PasswordHasher,
         email_sender::{ConsoleEmailSender, ResendEmailSender},
         persistence::{
@@ -33,9 +36,7 @@ impl AppState {
         let auth_repo = Arc::new(PgUserAuthRepository::new(db_pool.clone()));
 
         let email_sender: Arc<dyn EmailSender> = match config.environment {
-            AppEnvironment::Development => {
-                Arc::new(ConsoleEmailSender)
-            }
+            AppEnvironment::Development => Arc::new(ConsoleEmailSender),
             AppEnvironment::Production => {
                 let resend_api_key = std::env::var("RESEND_API_KEY")
                     .expect("RESEND_API_KEY must be set in production");
@@ -48,8 +49,8 @@ impl AppState {
         let verification_service = Arc::new(EmailVerificationService::new(
             verification_repo,
             email_sender,
-            std::env::var("FROM_EMAIL").expect("FROM_EMAIL must be set")),
-        );
+            std::env::var("FROM_EMAIL").expect("FROM_EMAIL must be set"),
+        ));
 
         let (user_cqrs, client_profile_cqrs_framework, client_profile_view_repo, _user_view_repo) =
             create_cqrs_framework(db_pool);

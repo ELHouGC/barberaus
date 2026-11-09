@@ -60,7 +60,6 @@ pub enum ClientDomainError {
     InvalidAvatarUrl,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Error, Serialize, Deserialize)]
 pub enum BarberDomainError {
     #[error("Barber profile is already initialized")]

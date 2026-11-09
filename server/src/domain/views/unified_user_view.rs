@@ -44,7 +44,7 @@ pub struct ClientProfileViewSection {
 }
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 
-pub struct ClientProfileAvatar{
+pub struct ClientProfileAvatar {
     pub avatar_url: Option<String>,
     pub crop_cordinate: CropCoordinates,
 }
@@ -133,7 +133,10 @@ impl View<ClientProfileAggregate> for UnifiedUserView {
                 });
                 self.updated_at = Some(*created_at);
             }
-            ClientProfileEvent::AvatarUpdated { avatar_url, crop_coordinates } => {
+            ClientProfileEvent::AvatarUpdated {
+                avatar_url,
+                crop_coordinates,
+            } => {
                 if let Some(profile) = &mut self.client_profile {
                     profile.avatar = Some(ClientProfileAvatar {
                         avatar_url: Some(avatar_url.clone()),
@@ -148,9 +151,8 @@ impl View<ClientProfileAggregate> for UnifiedUserView {
             } => {
                 if let Some(profile) = &mut self.client_profile {
                     for style in selected_styles {
-                        profile.selected_styles.push(style.clone());       
+                        profile.selected_styles.push(style.clone());
                     }
-
                 }
                 self.updated_at = Some(*updated_at);
             }
@@ -181,8 +183,7 @@ mod tests {
 
     use super::{ClientProfileViewSection, UnifiedUserView};
     use crate::domain::user::{
-        client_profile_aggregate::ClientProfileAggregate,
-        events::ClientProfileEvent,
+        client_profile_aggregate::ClientProfileAggregate, events::ClientProfileEvent,
     };
 
     #[test]

@@ -1,5 +1,6 @@
-use crate::{
-    application::{error::AppError, services::email_verification::{EmailMessage, EmailSender}},
+use crate::application::{
+    error::AppError,
+    services::email_verification::{EmailMessage, EmailSender},
 };
 use async_trait::async_trait;
 use resend_rs::{Resend, types::CreateEmailBaseOptions};

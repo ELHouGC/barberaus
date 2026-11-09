@@ -16,10 +16,10 @@ const SEVEN_DAYS_IN_SECONDS: usize = 604_800;
 pub fn create_refresh_cookie(refresh_token: &str) -> Result<HeaderMap, AppError> {
     let mut headers = HeaderMap::new();
 
-    // Secure HttpOnly cookie definition 
+    // Secure HttpOnly cookie definition
     // the cookie is sent only over HTTPS, and cannot be read by JS.
     // however for local development we need to allow HTTP, so we cannot set the Secure attribute yet.
-    // SameSite=Strict prevents CSRF 
+    // SameSite=Strict prevents CSRF
     // Path=/api/v1/auth restricts cookie transmission only to auth endpoints (refresh/logout)
     let cookie_value = format!(
         "refresh_token={};  HttpOnly;  SameSite=Strict; Path=/api/v1/auth/; Max-Age={}",

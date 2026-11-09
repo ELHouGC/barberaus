@@ -19,11 +19,16 @@ use uuid::Uuid;
 
 use crate::{
     application::{
-        error::{AppError, AuthError, ConflictKind, Resource}, ports::auth_repository::{UserAuthRepository, UserCredentialsRecord}, services::{
+        error::{AppError, AuthError, ConflictKind, Resource},
+        ports::auth_repository::{UserAuthRepository, UserCredentialsRecord},
+        services::{
             email_verification::EmailVerificationService,
             password_hasher_service::PasswordHasherService,
         },
-    }, cqrs::UserCqrsFramework, domain::user::account_aggregate::UserAccountCommand, transport::dto::auth::{
+    },
+    cqrs::UserCqrsFramework,
+    domain::user::account_aggregate::UserAccountCommand,
+    transport::dto::auth::{
         LoginRequest, MessageResponse, ResendVerificationRequest, SignupRequest, SignupResponse,
         UserPayload, VerifyEmailRequest,
     },
@@ -150,13 +155,16 @@ impl AuthApp {
         &self,
         payload: ResendVerificationRequest,
     ) -> Result<MessageResponse, AppError> {
-        let user = self.auth_repo.find_by_id(payload.user_id).await?
+        let user = self
+            .auth_repo
+            .find_by_id(payload.user_id)
+            .await?
             .ok_or(AppError::NotFound(Resource::User))?;
         if user.is_account_active {
             return Err(AppError::Conflict(ConflictKind::AccountAlreadyVerified));
         }
         self.email_verification_service
-            .prepare_for_verification(user.user_id, &user.email) // stored email 
+            .prepare_for_verification(user.user_id, &user.email) // stored email
             .await?;
 
         Ok(MessageResponse {

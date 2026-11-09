@@ -24,10 +24,8 @@ use crate::{
             AuthResponse, LoginRequest, MessageResponse, ResendVerificationRequest, Session,
             SignupRequest, SignupResponse, VerifyEmailRequest,
         },
-        http::{
-            auth_cookies, extractors::auth_context::AuthContext
-        },
-        middlewares::{ refresh_token::RefreshToken},
+        http::{auth_cookies, extractors::auth_context::AuthContext},
+        middlewares::refresh_token::RefreshToken,
         response::ApiResponse,
     },
 };
@@ -157,9 +155,12 @@ pub async fn refresh_token(
 ) -> Result<SessionReply, AppError> {
     // Rotate: the old refresh token is invalidated, a new pair is issued.
     // (The old `println!`s printed BOTH the old and the new refresh token.)
-    let session =
-        session_management::rotate_session(&state.redis_pool, refresh_token.as_str(), &state.config.jwt_secret)
-            .await?;
+    let session = session_management::rotate_session(
+        &state.redis_pool,
+        refresh_token.as_str(),
+        &state.config.jwt_secret,
+    )
+    .await?;
     tracing::info!("session rotated");
 
     session_reply(session)

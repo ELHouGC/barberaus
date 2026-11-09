@@ -65,10 +65,10 @@ mod tests {
         transport::{
             dto::client_profile::UpdateStylePreferencesRequest,
             http::{
+                extractors::auth_context::AuthContext,
                 handlers::client_profile::handle_append_style_preferences,
                 router::client_profile::create_router,
-                 extractors::auth_context::AuthContext
-            }
+            },
         },
     };
 

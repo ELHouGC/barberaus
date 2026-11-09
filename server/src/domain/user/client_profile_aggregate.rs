@@ -22,7 +22,6 @@ pub struct ClientProfileAggregate {
     pub followed_barber_ids: Vec<Uuid>,
 }
 
-
 // -----------------------------------------------------------------------------
 // Commands
 // -----------------------------------------------------------------------------
@@ -31,15 +30,15 @@ pub enum ClientProfileCommand {
     InitializeProfile {
         client_id: Uuid,
     },
-    UpdateAvatar { 
+    UpdateAvatar {
         user_id: String,
         avatar_url: String,
-        crop_coordinates: CropCoordinates, 
+        crop_coordinates: CropCoordinates,
     },
     AppendStylePreferences {
         selected_styles: Vec<String>,
     },
-    
+
     FollowBarber {
         barber_id: Uuid,
     },
@@ -77,24 +76,26 @@ impl Aggregate for ClientProfileAggregate {
                 )
                 .await;
             }
-            ClientProfileCommand::UpdateAvatar { avatar_url, crop_coordinates , .. } => {
+            ClientProfileCommand::UpdateAvatar {
+                avatar_url,
+                crop_coordinates,
+                ..
+            } => {
                 if self.is_initialized == false {
                     return Err(ClientDomainError::ProfileNotInitialized);
                 }
                 if avatar_url.is_empty() {
                     return Err(ClientDomainError::InvalidAvatarUrl);
                 }
-                
 
                 sink.write(
                     ClientProfileEvent::AvatarUpdated {
-                        avatar_url,    
+                        avatar_url,
                         crop_coordinates,
                     },
                     self,
                 )
                 .await;
-
             }
             ClientProfileCommand::AppendStylePreferences { selected_styles } => {
                 if !self.is_initialized {
@@ -155,14 +156,16 @@ impl Aggregate for ClientProfileAggregate {
                 self.client_id = Some(client_id);
                 self.is_initialized = true;
             }
-            ClientProfileEvent::AvatarUpdated { avatar_url , .. } => {
+            ClientProfileEvent::AvatarUpdated { avatar_url, .. } => {
                 self.avatar_url = Some(avatar_url);
                 // Optionally, you can store crop_coordinates in the aggregate if needed
             }
-            ClientProfileEvent::StylePreferencesUpdated { selected_styles, .. } => {
+            ClientProfileEvent::StylePreferencesUpdated {
+                selected_styles, ..
+            } => {
                 self.selected_styles.extend(selected_styles);
             }
-           
+
             ClientProfileEvent::BarberFollowed { barber_id, .. } => {
                 if !self.followed_barber_ids.contains(&barber_id) {
                     self.followed_barber_ids.push(barber_id);
@@ -199,165 +202,165 @@ impl DomainEvent for ClientProfileEvent {
     }
 }
 
-    #[cfg(test)]
-    mod tests {
-        use chrono::Utc;
-        use cqrs_es::{
-            Aggregate, CqrsFramework, EventStore, event_sink::EventSink, mem_store::MemStore,
+#[cfg(test)]
+mod tests {
+    use chrono::Utc;
+    use cqrs_es::{
+        Aggregate, CqrsFramework, EventStore, event_sink::EventSink, mem_store::MemStore,
+    };
+    use uuid::Uuid;
+
+    use super::{ClientProfileAggregate, ClientProfileCommand};
+    use crate::domain::user::events::ClientProfileEvent;
+
+    #[tokio::test]
+    async fn style_preference_command_appends_unique_resolved_styles() {
+        let client_id = Uuid::new_v4();
+        let mut aggregate = ClientProfileAggregate {
+            client_id: Some(client_id),
+            is_initialized: true,
+            selected_styles: vec!["fade".to_string()],
+            ..Default::default()
         };
-        use uuid::Uuid;
+        let sink = EventSink::<ClientProfileAggregate>::default();
 
-        use super::{ClientProfileAggregate, ClientProfileCommand};
-        use crate::domain::user::events::ClientProfileEvent;
-
-        #[tokio::test]
-        async fn style_preference_command_appends_unique_resolved_styles() {
-            let client_id = Uuid::new_v4();
-            let mut aggregate = ClientProfileAggregate {
-                client_id: Some(client_id),
-                is_initialized: true,
-                selected_styles: vec!["fade".to_string()],
-                ..Default::default()
-            };
-            let sink = EventSink::<ClientProfileAggregate>::default();
-
-            aggregate
-                .handle(
-                    ClientProfileCommand::AppendStylePreferences {
-                        selected_styles: vec![
-                            "curly".to_string(),
-                            "curly".to_string(),
-                            "fade".to_string(),
-                            "textured".to_string(),
-                        ],
-                    },
-                    &(),
-                    &sink,
-                )
-                .await
-                .unwrap();
-
-            let events = sink.collect().await;
-            assert_eq!(events.len(), 1);
-            assert!(matches!(
-                &events[0],
-                ClientProfileEvent::StylePreferencesUpdated { selected_styles, .. }
-                    if selected_styles == &["curly".to_string(), "textured".to_string()]
-            ));
-            assert_eq!(aggregate.selected_styles, ["fade", "curly", "textured"]);
-
-            let event_json = serde_json::to_string(&events[0]).unwrap();
-            assert!(!event_json.contains("gents-curly-top"));
-            assert!(!event_json.contains("gents-textured-fade"));
-        }
-
-        #[test]
-        fn replaying_style_preference_events_restores_the_same_state() {
-            let client_id = Uuid::new_v4();
-            let mut aggregate = ClientProfileAggregate::default();
-            Aggregate::apply(
-                &mut aggregate,
-                ClientProfileEvent::ClientProfileInitialized {
-                    client_id,
-                    created_at: Utc::now(),
-                },
-            );
-            Aggregate::apply(
-                &mut aggregate,
-                ClientProfileEvent::StylePreferencesUpdated {
-                    selected_styles: vec!["curly".to_string(), "volume".to_string()],
-                    updated_at: Utc::now(),
-                },
-            );
-
-            assert_eq!(
-                aggregate.selected_styles,
-                ["curly".to_string(), "volume".to_string()]
-            );
-        }
-
-        #[tokio::test]
-        async fn style_preferences_require_an_initialized_profile() {
-            let mut aggregate = ClientProfileAggregate::default();
-            let sink = EventSink::<ClientProfileAggregate>::default();
-
-            let result = aggregate
-                .handle(
-                    ClientProfileCommand::AppendStylePreferences {
-                        selected_styles: vec!["fade".to_string()],
-                    },
-                    &(),
-                    &sink,
-                )
-                .await;
-
-            assert!(matches!(
-                result,
-                Err(crate::domain::errors::ClientDomainError::ProfileNotInitialized)
-            ));
-            assert!(sink.collect().await.is_empty());
-        }
-
-        #[tokio::test]
-        async fn cqrs_persists_style_deltas_and_replays_appended_state() {
-            let client_id = Uuid::new_v4();
-            let aggregate_id = client_id.to_string();
-            let store = MemStore::<ClientProfileAggregate>::default();
-            let cqrs = CqrsFramework::new(store.clone(), Vec::new(), ());
-
-            cqrs.execute(
-                &aggregate_id,
-                ClientProfileCommand::InitializeProfile { client_id },
-            )
-            .await
-            .unwrap();
-            cqrs.execute(
-                &aggregate_id,
+        aggregate
+            .handle(
                 ClientProfileCommand::AppendStylePreferences {
-                    selected_styles: vec!["fade".to_string(), "textured".to_string()],
+                    selected_styles: vec![
+                        "curly".to_string(),
+                        "curly".to_string(),
+                        "fade".to_string(),
+                        "textured".to_string(),
+                    ],
                 },
-            )
-            .await
-            .unwrap();
-            cqrs.execute(
-                &aggregate_id,
-                ClientProfileCommand::AppendStylePreferences {
-                    selected_styles: vec!["curly".to_string(), "fade".to_string()],
-                },
-            )
-            .await
-            .unwrap();
-            cqrs.execute(
-                &aggregate_id,
-                ClientProfileCommand::AppendStylePreferences {
-                    selected_styles: Vec::new(),
-                },
+                &(),
+                &sink,
             )
             .await
             .unwrap();
 
-            let events = store.load_events(&aggregate_id).await.unwrap();
-            assert_eq!(events.len(), 3);
-            let style_events: Vec<_> = events
-                .iter()
-                .filter_map(|envelope| match &envelope.payload {
-                    ClientProfileEvent::StylePreferencesUpdated {
-                        selected_styles, ..
-                    } => Some(selected_styles),
-                    _ => None,
-                })
-                .collect();
-            assert_eq!(style_events.len(), 2);
-            assert_eq!(
-                style_events[0],
-                &vec!["fade".to_string(), "textured".to_string()]
-            );
-            assert_eq!(style_events[1], &vec!["curly".to_string()]);
+        let events = sink.collect().await;
+        assert_eq!(events.len(), 1);
+        assert!(matches!(
+            &events[0],
+            ClientProfileEvent::StylePreferencesUpdated { selected_styles, .. }
+                if selected_styles == &["curly".to_string(), "textured".to_string()]
+        ));
+        assert_eq!(aggregate.selected_styles, ["fade", "curly", "textured"]);
 
-            let replayed = store.load_aggregate(&aggregate_id).await.unwrap();
-            assert_eq!(
-                replayed.aggregate.selected_styles,
-                ["fade", "textured", "curly"]
-            );
-        }
+        let event_json = serde_json::to_string(&events[0]).unwrap();
+        assert!(!event_json.contains("gents-curly-top"));
+        assert!(!event_json.contains("gents-textured-fade"));
     }
+
+    #[test]
+    fn replaying_style_preference_events_restores_the_same_state() {
+        let client_id = Uuid::new_v4();
+        let mut aggregate = ClientProfileAggregate::default();
+        Aggregate::apply(
+            &mut aggregate,
+            ClientProfileEvent::ClientProfileInitialized {
+                client_id,
+                created_at: Utc::now(),
+            },
+        );
+        Aggregate::apply(
+            &mut aggregate,
+            ClientProfileEvent::StylePreferencesUpdated {
+                selected_styles: vec!["curly".to_string(), "volume".to_string()],
+                updated_at: Utc::now(),
+            },
+        );
+
+        assert_eq!(
+            aggregate.selected_styles,
+            ["curly".to_string(), "volume".to_string()]
+        );
+    }
+
+    #[tokio::test]
+    async fn style_preferences_require_an_initialized_profile() {
+        let mut aggregate = ClientProfileAggregate::default();
+        let sink = EventSink::<ClientProfileAggregate>::default();
+
+        let result = aggregate
+            .handle(
+                ClientProfileCommand::AppendStylePreferences {
+                    selected_styles: vec!["fade".to_string()],
+                },
+                &(),
+                &sink,
+            )
+            .await;
+
+        assert!(matches!(
+            result,
+            Err(crate::domain::errors::ClientDomainError::ProfileNotInitialized)
+        ));
+        assert!(sink.collect().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn cqrs_persists_style_deltas_and_replays_appended_state() {
+        let client_id = Uuid::new_v4();
+        let aggregate_id = client_id.to_string();
+        let store = MemStore::<ClientProfileAggregate>::default();
+        let cqrs = CqrsFramework::new(store.clone(), Vec::new(), ());
+
+        cqrs.execute(
+            &aggregate_id,
+            ClientProfileCommand::InitializeProfile { client_id },
+        )
+        .await
+        .unwrap();
+        cqrs.execute(
+            &aggregate_id,
+            ClientProfileCommand::AppendStylePreferences {
+                selected_styles: vec!["fade".to_string(), "textured".to_string()],
+            },
+        )
+        .await
+        .unwrap();
+        cqrs.execute(
+            &aggregate_id,
+            ClientProfileCommand::AppendStylePreferences {
+                selected_styles: vec!["curly".to_string(), "fade".to_string()],
+            },
+        )
+        .await
+        .unwrap();
+        cqrs.execute(
+            &aggregate_id,
+            ClientProfileCommand::AppendStylePreferences {
+                selected_styles: Vec::new(),
+            },
+        )
+        .await
+        .unwrap();
+
+        let events = store.load_events(&aggregate_id).await.unwrap();
+        assert_eq!(events.len(), 3);
+        let style_events: Vec<_> = events
+            .iter()
+            .filter_map(|envelope| match &envelope.payload {
+                ClientProfileEvent::StylePreferencesUpdated {
+                    selected_styles, ..
+                } => Some(selected_styles),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(style_events.len(), 2);
+        assert_eq!(
+            style_events[0],
+            &vec!["fade".to_string(), "textured".to_string()]
+        );
+        assert_eq!(style_events[1], &vec!["curly".to_string()]);
+
+        let replayed = store.load_aggregate(&aggregate_id).await.unwrap();
+        assert_eq!(
+            replayed.aggregate.selected_styles,
+            ["fade", "textured", "curly"]
+        );
+    }
+}

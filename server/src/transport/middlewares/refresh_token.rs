@@ -112,9 +112,12 @@ mod tests {
 
     #[tokio::test]
     async fn header_wins_over_cookie() {
-        let token = extract(&[("x-refresh-token", "from-header"), ("cookie", "refresh_token=from-cookie")])
-            .await
-            .unwrap();
+        let token = extract(&[
+            ("x-refresh-token", "from-header"),
+            ("cookie", "refresh_token=from-cookie"),
+        ])
+        .await
+        .unwrap();
         assert_eq!(token.as_str(), "from-header");
     }
 

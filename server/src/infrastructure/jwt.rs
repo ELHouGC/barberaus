@@ -1,4 +1,4 @@
-use crate::{application::error::{AppError, AuthError},};
+use crate::application::error::{AppError, AuthError};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -41,7 +41,9 @@ pub fn decode_token(token: &str, secret: &str) -> Result<Claims, AppError> {
     )
     .map(|data| data.claims)
     .map_err(|e| match e.kind() {
-       jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::Auth(AuthError::TokenExpired),
-       _ => AppError::Auth(AuthError::InvalidToken), 
-   })
+        jsonwebtoken::errors::ErrorKind::ExpiredSignature => {
+            AppError::Auth(AuthError::TokenExpired)
+        }
+        _ => AppError::Auth(AuthError::InvalidToken),
+    })
 }

@@ -53,7 +53,7 @@ pub enum ActivationOutcome {
 #[async_trait]
 pub trait EmailVerificationRepo: Send + Sync {
     async fn create(&self, verification: EmailVerification)
-        -> Result<EmailVerification, RepoError>;
+    -> Result<EmailVerification, RepoError>;
 
     async fn find_by_token_hash(
         &self,

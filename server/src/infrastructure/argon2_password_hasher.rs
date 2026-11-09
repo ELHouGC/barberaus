@@ -1,5 +1,5 @@
-use crate::{
-    application::{error::AppError, services::password_hasher_service::PasswordHasherService},
+use crate::application::{
+    error::AppError, services::password_hasher_service::PasswordHasherService,
 };
 use argon2::{
     Argon2,
@@ -19,13 +19,10 @@ pub struct Argon2PasswordHasher;
 #[async_trait]
 impl PasswordHasherService for Argon2PasswordHasher {
     async fn hash(&self, raw_password: String) -> Result<String, AppError> {
-        let _permit = HASH_SEMAPHORE
-            .acquire()
-            .await
-            .map_err(|e| {
-                tracing::error!(error = ?e, "Failed to acquire hash semaphore permit");
-                AppError::internal("Internal processing error")
-            })?;
+        let _permit = HASH_SEMAPHORE.acquire().await.map_err(|e| {
+            tracing::error!(error = ?e, "Failed to acquire hash semaphore permit");
+            AppError::internal("Internal processing error")
+        })?;
 
         let hashed = tokio::task::spawn_blocking(move || {
             let salt = SaltString::generate(&mut OsRng);
@@ -50,13 +47,10 @@ impl PasswordHasherService for Argon2PasswordHasher {
     }
 
     async fn verify(&self, raw_password: String, hash: String) -> Result<bool, AppError> {
-        let _permit = HASH_SEMAPHORE
-            .acquire()
-            .await
-            .map_err(|e| {
-                tracing::error!(error = ?e, "Failed to acquire hash semaphore permit");
-                AppError::internal("Internal processing error")
-            })?;
+        let _permit = HASH_SEMAPHORE.acquire().await.map_err(|e| {
+            tracing::error!(error = ?e, "Failed to acquire hash semaphore permit");
+            AppError::internal("Internal processing error")
+        })?;
 
         let verified = tokio::task::spawn_blocking(move || {
             let parsed_hash = PasswordHash::new(&hash).map_err(|e| {

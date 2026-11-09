@@ -1,5 +1,3 @@
-
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AppEnvironment {
     Development,
@@ -11,9 +9,7 @@ impl AppEnvironment {
         match std::env::var("ENV").as_deref() {
             Ok("development") => Self::Development,
             Ok("production") => Self::Production,
-            _ => panic!(
-                "ENV must be set to either 'development' or 'production'"
-            ),
+            _ => panic!("ENV must be set to either 'development' or 'production'"),
         }
     }
 }
@@ -25,8 +21,7 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Self {
-        let jwt_secret =
-        std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+        let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
         assert!(
             !jwt_secret.trim().is_empty(),
@@ -38,8 +33,8 @@ impl Config {
             "JWT_SECRET must be at least 32 bytes for HS256"
         );
 
-        Self { 
-            jwt_secret ,
+        Self {
+            jwt_secret,
             environment: AppEnvironment::from_env(),
         }
     }

@@ -1,8 +1,12 @@
 use crate::{
-    AppState, application::error::AppError, transport::{
+    AppState,
+    application::error::AppError,
+    transport::{
         dto::client_profile::{
-            FollowBarberRequest, SignatureResponse, StylePreferencesResponse, UpdateAvatarRequest, UpdateStylePreferencesRequest,
-        }, response::ApiResponse,
+            FollowBarberRequest, SignatureResponse, StylePreferencesResponse, UpdateAvatarRequest,
+            UpdateStylePreferencesRequest,
+        },
+        response::ApiResponse,
     },
 };
 use axum::{

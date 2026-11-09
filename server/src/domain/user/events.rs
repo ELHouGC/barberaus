@@ -64,7 +64,10 @@ pub enum ClientProfileEvent {
         client_id: Uuid,
         created_at: DateTime<Utc>,
     },
-    AvatarUpdated { avatar_url: String , crop_coordinates: CropCoordinates }, // (x, y, width, height)
+    AvatarUpdated {
+        avatar_url: String,
+        crop_coordinates: CropCoordinates,
+    }, // (x, y, width, height)
     StylePreferencesUpdated {
         selected_styles: Vec<String>,
         updated_at: DateTime<Utc>,
