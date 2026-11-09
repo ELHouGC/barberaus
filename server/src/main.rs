@@ -8,7 +8,11 @@ use resend_rs::Method;
 use transport::http;
 mod application;
 
-use axum::{Router, http::{HeaderValue, header}, routing::get};
+use axum::{
+    Router,
+    http::{HeaderValue, header},
+    routing::get,
+};
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
@@ -23,8 +27,21 @@ async fn health_check() -> &'static str {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let dotenv_result = dotenvy::dotenv();
+
     tracing_subscriber::fmt::init();
-    dotenvy::dotenv().ok();
+
+    match dotenv_result {
+        Ok(path) => {
+            tracing::debug!(path = %path.display(), "Loaded environment file");
+        }
+        Err(error) if error.not_found() => {
+            tracing::debug!("No .env file found; using process environment");
+        }
+        Err(error) => {
+            return Err(error.into());
+        }
+    }
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL must be set");
