@@ -59,3 +59,27 @@ pub enum ClientDomainError {
     #[error("Invalid avatar URL provided")]
     InvalidAvatarUrl,
 }
+
+
+#[derive(Debug, Clone, PartialEq, Eq, Error, Serialize, Deserialize)]
+pub enum BarberDomainError {
+    #[error("Barber profile is already initialized")]
+    AlreadyInitialized,
+
+    #[error("Barber profile must be initialized before onboarding")]
+    ProfileNotInitialized,
+
+    #[error("Barber onboarding has already been completed")]
+    AlreadyOnboarded,
+
+    #[error("Cannot follow your own profile")]
+    CannotFollowSelf,
+
+    #[error("Already following this barber")]
+    AlreadyFollowing,
+
+    #[error("Aggregate reached an invalid internal state")]
+    InvalidState,
+    #[error("Invalid avatar URL provided")]
+    InvalidAvatarUrl,
+}

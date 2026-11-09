@@ -85,6 +85,15 @@ pub struct SignatureResponse {
     pub folder: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct FollowBarberRequest {
+    pub barber_id: Uuid,
+}
+
+
+
+
+
 #[cfg(test)]
 mod style_preference_tests {
     use super::{StylePreferencesResponse, UpdateStylePreferencesRequest};

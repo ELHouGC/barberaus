@@ -54,6 +54,13 @@ pub struct BarberProfileViewSection {
     pub business_name: Option<String>,
     pub city: Option<String>,
     pub follower_count: i32,
+
+    // Discovery information
+    pub image_url: Option<String>,
+    pub image_alt: Option<String>,
+    pub specialties: Vec<String>,
+    pub rating: Option<f64>,
+    pub available: Option<bool>,
 }
 
 // -----------------------------------------------------------------------------

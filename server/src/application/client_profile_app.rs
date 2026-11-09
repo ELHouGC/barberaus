@@ -24,6 +24,7 @@ pub struct ClientProfileApp {
     pub cloudinary: Arc<CloudinaryService>,
 }
 
+
 impl ClientProfileApp {
     pub fn new(
         cqrs: Arc<ClientProfileCqrsFramework>,
@@ -88,4 +89,42 @@ impl ClientProfileApp {
             selected_styles: client_profile.selected_styles,
         })
     }
+
+    pub async fn follow_barber(
+        &self,
+        user_id: Uuid,
+        barber_id: Uuid,
+    ) -> Result<(), AppError> {
+        // 1. Load the target barber's unified user view.
+        let barber_aggregate_id = barber_id.to_string();
+
+        let barber_view = self
+            .view_repo
+            .load(&barber_aggregate_id)
+            .await
+            .map_err(AppError::internal)?
+            .ok_or(AppError::NotFound(Resource::User))?;
+
+        // 2. Verify that the barber profile exists and is initialized.
+        let has_initialized_profile = barber_view
+            .barber_profile
+            .as_ref()
+            .is_some_and(|profile| profile.is_initialized);
+
+        if !has_initialized_profile {
+            return Err(AppError::NotFound(Resource::BarberProfile));
+        }
+
+        // 3. Execute the follow command against the client's aggregate.
+        let aggregate_id = user_id.to_string();
+
+        let command = ClientProfileCommand::FollowBarber {
+            barber_id,
+        };
+
+        self.cqrs.execute(&aggregate_id, command).await?;
+
+        Ok(())
+    }
+
 }

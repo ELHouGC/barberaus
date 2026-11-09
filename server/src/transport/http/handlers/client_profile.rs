@@ -1,12 +1,8 @@
 use crate::{
-    AppState,
-    application::error::AppError,
-    transport::{
+    AppState, application::error::AppError, transport::{
         dto::client_profile::{
-            SignatureResponse, StylePreferencesResponse, UpdateAvatarRequest,
-            UpdateStylePreferencesRequest,
-        },
-        response::ApiResponse,
+            FollowBarberRequest, SignatureResponse, StylePreferencesResponse, UpdateAvatarRequest, UpdateStylePreferencesRequest,
+        }, response::ApiResponse,
     },
 };
 use axum::{
@@ -63,4 +59,17 @@ pub async fn handle_append_style_preferences(
         .await?;
 
     Ok(Json(ApiResponse::success(preferences)))
+}
+
+pub async fn handle_follow_barber_command(
+    State(state): State<AppState>,
+    auth: AuthContext,
+    Json(payload): Json<FollowBarberRequest>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    state
+        .client_profile_app
+        .follow_barber(auth.claims.sub, payload.barber_id)
+        .await?;
+
+    Ok(Json(ApiResponse::success(())))
 }

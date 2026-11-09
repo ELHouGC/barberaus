@@ -2,7 +2,7 @@
 use axum::{http::{header, HeaderValue, StatusCode as S}, response::{IntoResponse, Response}, Json};
 use serde::Serialize;
 use uuid::Uuid;
-use crate::application::error::*;
+use crate::{application::error::*, domain::errors::{BarberDomainError, UserDomainError}};
 use crate::domain::errors::ClientDomainError;
 
 struct Spec { 
@@ -38,7 +38,9 @@ fn classify(err: &AppError) -> Spec {
         },
         AppError::Validation(_)         => spec(S::UNPROCESSABLE_ENTITY, "INVALID_INPUT", "Invalid input"),
         AppError::ClientProfile(d )      => client_profile(d),
-        AppError::User(_)               => todo!("same shape as client_profile()"),
+        AppError::BarberProfile(d )      => barber_profile(d),
+
+        AppError::User(d)               => user(d),
         AppError::NotFound(_)           => spec(S::NOT_FOUND, "USER_NOT_FOUND", "User not found"),
         AppError::Conflict(k) => match k {
             ConflictKind::EmailExists            => spec(S::CONFLICT, "EMAIL_EXISTS", "Email already registered"),
@@ -60,6 +62,32 @@ fn   client_profile(e: &ClientDomainError) -> Spec {
         AlreadyFollowing      => spec(S::CONFLICT, "ALREADY_FOLLOWING", "Already following"),
         InvalidAvatarUrl      => spec(S::UNPROCESSABLE_ENTITY, "INVALID_AVATAR_URL", "Invalid avatar URL"),
         InvalidState          => spec(S::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Internal error"),
+    }
+}
+fn   barber_profile(e: &BarberDomainError) -> Spec {
+    use BarberDomainError::*;
+    match e {
+        AlreadyInitialized    => spec(S::CONFLICT, "BARBER_PROFILE_ALREADY_INITIALIZED", "Barber profile already initialized"),
+        ProfileNotInitialized => spec(S::CONFLICT, "BARBER_PROFILE_NOT_INITIALIZED", "Barber profile not initialized"),
+        AlreadyOnboarded      => spec(S::CONFLICT, "ONBOARDING_ALREADY_COMPLETED", "Onboarding already completed"),
+        CannotFollowSelf      => spec(S::UNPROCESSABLE_ENTITY, "CANNOT_FOLLOW_SELF", "Cannot follow yourself"),
+        AlreadyFollowing      => spec(S::CONFLICT, "ALREADY_FOLLOWING", "Already following"),
+        InvalidAvatarUrl      => spec(S::UNPROCESSABLE_ENTITY, "INVALID_AVATAR_URL", "Invalid avatar URL"),
+        InvalidState          => spec(S::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Internal error"),
+    }
+}
+
+fn user(e: &UserDomainError) -> Spec {
+    use UserDomainError::*;
+    match e {
+        UserNotFound => spec(S::NOT_FOUND, "USER_NOT_FOUND", "User not found"),
+        InvalidEmail => spec(S::UNPROCESSABLE_ENTITY, "INVALID_EMAIL", "Invalid email"),
+        InvalidState => spec(S::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Internal error"),
+        AlreadyExists => spec(S::CONFLICT, "USER_ALREADY_EXISTS", "User already exists"),
+        AlreadyVerified => spec(S::CONFLICT, "USER_ALREADY_VERIFIED", "User already verified"),
+        UserNotVerified => spec(S::FORBIDDEN, "USER_NOT_VERIFIED", "User not verified"),
+        ProfileAlreadyExists => spec(S::CONFLICT, "PROFILE_ALREADY_EXISTS", "Profile already exists"),
+        NotABarber => spec(S::UNPROCESSABLE_ENTITY, "NOT_A_BARBER", "Target profile is not a barber"),
     }
 }
 

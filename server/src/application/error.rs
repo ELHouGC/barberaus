@@ -1,6 +1,6 @@
 // application/error.rs
 use uuid::Uuid;
-use crate::domain::errors::{ClientDomainError, UserDomainError};
+use crate::domain::errors::{BarberDomainError, ClientDomainError, UserDomainError};
 
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
@@ -11,6 +11,7 @@ pub enum AppError {
     #[error("verification: {0:?}")]     Verification(VerificationError),
     #[error("validation failed")]       Validation(Vec<Violation>),
     #[error(transparent)]               ClientProfile(ClientDomainError),
+    #[error(transparent)]               BarberProfile(BarberDomainError),
     #[error(transparent)]               User(UserDomainError),
     #[error("not found: {0:?}")]        NotFound(Resource),
     #[error("conflict: {0:?}")]         Conflict(ConflictKind),
@@ -25,7 +26,7 @@ pub enum AppError {
 }
 #[derive(Debug)] pub enum  AccessError { Forbidden, TenantContextRequired, MembershipNotFound }
 #[derive(Debug)] pub enum VerificationError { InvalidToken, Expired }
-#[derive(Debug)] pub enum Resource { User }
+#[derive(Debug)] pub enum Resource { User , BarberProfile }
 #[derive(Debug)] pub enum ConflictKind { EmailExists, AccountAlreadyVerified  }
 
 /// One failing field: JSON pointer + i18n key.
