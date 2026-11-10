@@ -1,6 +1,6 @@
-# BarberOS Client
+# Barberaus Client
 
-The Vue 3 application for BarberOS, hosted in a Tauri 2 shell for desktop and mobile. It covers registration, login, email verification, and early client onboarding: avatar setup, haircut inspiration, and location.
+The Vue 3 application for Barberaus, hosted in a Tauri 2 shell for desktop and mobile. It covers registration, login, email verification, and early client onboarding: avatar setup, haircut inspiration, and location.
 
 > **Status: early-stage.** Authentication, session handling, and avatar upload are connected to the [API](../server/README.md). Style selection, location, and barber discovery are local UI state or demo data. See [Current status](#current-status).
 

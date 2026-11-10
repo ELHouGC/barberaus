@@ -10,7 +10,7 @@
     const socket = new WebSocket(WS_BASE_URL);
 
     socket.onopen = () => {
-      console.log('[WS] Connected to BarberOS server');
+      console.log('[WS] Connected to Barberaus server');
       onStatusChange(true);
     };
 

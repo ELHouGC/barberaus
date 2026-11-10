@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "b303c58e-607b-4087-b218-87baab04d1ea",
-    "name": "BarberOS API",
-    "description": "Postman collection for BarberOS API test automation. Authentication failures use RFC 9457 problem details; protected client avatar requests use the authenticated user's Cloudinary upload signature.",
+    "name": "Barberaus API",
+    "description": "Postman collection for Barberaus API test automation. Authentication failures use RFC 9457 problem details; protected client avatar requests use the authenticated user's Cloudinary upload signature.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -483,9 +483,9 @@
           "",
           "    const isPublic = publicEndpoints.some(path => urlStr.includes(path));",
           "    const apiHosts = [pm.environment.get('hostUrl'), pm.environment.get('baseUrl')].filter(Boolean);",
-          "    const isBarberOsApi = apiHosts.some(host => urlStr.startsWith(host));",
+          "    const isBarberausApi = apiHosts.some(host => urlStr.startsWith(host));",
           "",
-          "    if (isBarberOsApi && !isPublic) {",
+          "    if (isBarberausApi && !isPublic) {",
           "        let accessToken = await pm.vault.get('accessToken');",
           "        if (!accessToken) accessToken = pm.environment.get('accessToken');",
           "        if (accessToken) {",

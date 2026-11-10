@@ -167,8 +167,8 @@ Nominatim is included in the root Docker Compose stack and is configured to impo
 │       ├── src/
 │       └── guest-js/
 ├── postman/
-│   ├── BarberOS API.postman_collection.json
-│   └── BarberOS Auth.postman_environment.json
+│   ├── Barberaus API.postman_collection.json
+│   └── Barberaus Auth.postman_environment.json
 └── server/
     ├── README.md                       # Backend architecture and API guide
     ├── .env.example                    # Backend and Compose environment template

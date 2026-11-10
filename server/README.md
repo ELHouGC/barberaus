@@ -1,6 +1,6 @@
-# BarberOS Server
+# Barberaus Server
 
-The Rust API behind BarberOS. It handles account registration, password authentication, email verification, Redis-backed sessions, client avatar metadata, and haircut-style preferences.
+The Rust API behind Barberaus. It handles account registration, password authentication, email verification, Redis-backed sessions, client avatar metadata, and haircut-style preferences.
 
 **Not implemented yet:** barber search, follow endpoints, booking, and shop management. The discovery screen in the client uses local demo data, not this API. See [Known limitations](#known-limitations) for implementation gaps that matter before any production use.
 
